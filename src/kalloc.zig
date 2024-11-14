@@ -1,6 +1,6 @@
+const console = @import("console.zig");
 const memlayout = @import("memlayout.zig");
 const mmu = @import("mmu.zig");
-const sh = @import("sh.zig");
 const string = @import("string.zig");
 const spinlock = @import("spinlock.zig");
 
@@ -33,8 +33,7 @@ fn freerange(vstart: usize, vend: usize) void {
 
 fn kfree(v: usize) void {
     if (v % mmu.PGSIZE != 0 or v < @intFromPtr(&end) or memlayout.v2p(v) >= memlayout.PHYSTOP) {
-        // NOTE: Not safe to call console.panic here, as lapic might not have been initialized
-        sh.panic("kfree");
+        console.panic("kfree");
     }
 
     string.memset(v, 1, mmu.PGSIZE);

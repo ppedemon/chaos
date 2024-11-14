@@ -1,9 +1,9 @@
+const console = @import("console.zig");
 const kalloc = @import("kalloc.zig");
 const mmu = @import("mmu.zig");
 const memlayout = @import("memlayout.zig");
 const mp = @import("mp.zig");
 const proc = @import("proc.zig");
-const sh = @import("sh.zig");
 const string = @import("string.zig");
 const x86 = @import("x86.zig");
 
@@ -41,7 +41,7 @@ extern fn set_segregs() void;
 pub fn seginit() void {
     var cpu = proc.mycpu();
     if (proc.cpuid() != 0) {
-        sh.panic("segint: not running on cpu #0");
+        console.panic("segint: not running on cpu #0");
     }
 
     cpu.gdt[mmu.SEG_KCODE] = mmu.SegDesc.new(mmu.STA_X|mmu.STA_R, 0, 0xFFFF_FFFF, mmu.DPL_KERNEL);
@@ -94,7 +94,7 @@ fn mappages(pgdir: [*]mmu.PdEntry, va: usize, size: usize, pa: usize, perm: usiz
     while (true) {
         const pte = walkpgdir(pgdir, virt_addr, true) orelse return false;
         if (pte.* & mmu.PTE_P != 0) {
-            sh.panic("remap");
+            console.panic("remap");
         }
         pte.* = phys_addr | perm | mmu.PTE_P;
 
@@ -111,7 +111,7 @@ fn mappages(pgdir: [*]mmu.PdEntry, va: usize, size: usize, pa: usize, perm: usiz
 
 fn setupkvm() ?[*]mmu.PdEntry {
     if (memlayout.PHYSTOP > memlayout.DEVSPACE) {
-        sh.panic("PHYSTOP too high");
+        console.panic("PHYSTOP too high");
     }
 
     const pgdir_va = kalloc.kalloc() orelse return null;

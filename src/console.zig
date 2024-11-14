@@ -5,8 +5,8 @@ const file = @import("file.zig");
 const ioapic = @import("ioapic.zig");
 const lapic = @import("lapic.zig");
 const memlayout = @import("memlayout.zig");
+const mp = @import("mp.zig");
 const proc = @import("proc.zig");
-const sh = @import("sh.zig");
 const spinlock = @import("spinlock.zig");
 const string = @import("string.zig");
 const trap = @import("trap.zig");
@@ -55,6 +55,15 @@ pub fn cprintf(comptime format: []const u8, args: anytype) void {
 }
 
 pub fn panic(msg: []const u8) noreturn {
+    // If CPUs not inititialized yet, it's too early for a proper panic.
+    // Just emit to console the given message and spin.
+    if (mp.ncpu == 0) {
+        for (msg) |c| {
+            consputc(c);
+        }
+        while (true) {}
+    }
+
     x86.cli();
     cons.locking = true;
 
@@ -91,7 +100,7 @@ fn cgaputc(c: u32) void {
     }
 
     if (pos < 0 or pos > 25 * 80) {
-        sh.panic("pos under/overflow");
+        panic("pos under/overflow");
     }
 
     if (pos / 80 >= 24) {

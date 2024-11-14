@@ -7,11 +7,11 @@ pub const Buf = struct {
     blockno: u32,
     lock: sleeplock.SleepLock,
     refcnt: u32,
-    prev: *Buf,
-    next: *Buf,
-    qnext: *Buf,
+    prev: ?*Buf,
+    next: ?*Buf,
+    qnext: ?*Buf,
     data: [fs.BSIZE]u8,
 };
 
-const B_VALID = 0x2; // Buffer read from disk
-const B_DIRTY = 0x4; // Buffer must be flushed to disk
+pub const B_VALID = 0x2; // Buffer read from disk
+pub const B_DIRTY = 0x4; // Buffer must be flushed to disk

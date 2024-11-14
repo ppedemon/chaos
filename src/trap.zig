@@ -3,7 +3,6 @@ const kbd = @import("kbd.zig");
 const mmu = @import("mmu.zig");
 const lapic = @import("lapic.zig");
 const proc = @import("proc.zig");
-const sh = @import("sh.zig");
 const spinlock = @import("spinlock.zig");
 const uart = @import("uart.zig");
 const x86 = @import("x86.zig");
@@ -94,7 +93,7 @@ export fn trap(tf: *x86.TrapFrame) void {
       // TODO Implement
     },
     else => {
-      sh.panic("Unhandled Exception");
+      console.panic("Unhandled Exception");
     },
   }
 }

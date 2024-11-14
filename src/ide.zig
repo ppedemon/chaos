@@ -20,17 +20,13 @@ const IDE_CMD_WRITE = 0x30;
 const IDE_CMD_RDMUL = 0xc4;
 const IDE_CMD_WRMUL = 0xc5;
 
-var lock = spinlock.SpinLock.init("ide");
-var idequeue: *bio.Buf = undefined;
+var idelock = spinlock.SpinLock.init("ide");
+var idequeue: ?*bio.Buf = undefined;
 
 var havedisk1 = false;
 
 fn idewait(checkerr: bool) ?void {
     var r: u8 = undefined;
-
-    // Select disk #0
-    x86.out(0x1F6, @as(u8, 0xE0 | 0 << 4));
-
     while (true) {
         r = x86.in(u8, 0x1F7);
         if (r & (IDE_BSY | IDE_DRDY) == IDE_DRDY) {
@@ -45,9 +41,12 @@ fn idewait(checkerr: bool) ?void {
 
 pub fn ideinit() void {
     ioapic.ioapicenable(trap.IRQ_IDE, mp.ncpu);
-    idewait(false) orelse return;
 
-    // Check if disk 1 is present
+    // Check if disk #0 is present
+    x86.out(0x1F6, @as(u8, 0xE0 | 0 << 4));
+    idewait(false) orelse unreachable;
+
+    // Check if disk #1 is present
     x86.out(0x1F6, @as(u8, 0xE0 | 1 << 4));
     for (0..1000) |_| {
         if (x86.in(u8, 0x1F7) != 0) {
@@ -56,6 +55,11 @@ pub fn ideinit() void {
         }
     }
 
-    // Back to disk 0
+    // Back to disk #0
     x86.out(0x1F6, @as(u8, 0xE0 | 0 << 4));
 }
+
+// Precondition: caller must hold this idelock
+// fn idestart(b: *bio.Buf) void {
+
+// }

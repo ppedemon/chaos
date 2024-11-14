@@ -8,7 +8,6 @@ const mmu = @import("mmu.zig");
 const mp = @import("mp.zig");
 const picirq = @import("picirq.zig");
 const proc = @import("proc.zig");
-const sh = @import("sh.zig");
 const spinlock = @import("spinlock.zig");
 const trap = @import("trap.zig");
 const uart = @import("uart.zig");
@@ -40,7 +39,7 @@ export fn main() align(16) noreturn {
     const end_addr = @intFromPtr(&end);
 
     kalloc.kinit1(end_addr, memlayout.p2v(4 * 1024 * 1024));
-    vm.kvmalloc() orelse sh.panic("kvmalloc");
+    vm.kvmalloc() orelse console.panic("kvmalloc");
     mp.mpinit();
     lapic.lapicinit();
     vm.seginit();

@@ -31,6 +31,30 @@ pub inline fn stos(comptime Type: type, dst: usize, data: Type, count: usize) vo
     }
 }
 
+pub inline fn insl(port: u16, dst: usize, count: usize) void {
+    asm volatile(
+        \\ cld
+        \\ rep insl
+        :
+        : [_] "{edi}" (dst),
+          [_] "{dx}" (port),
+          [_] "{ecx}" (count),
+        : "memory", "cc"
+    );
+}
+
+pub inline fn outsl(port: u16, src: usize, count: usize) void {
+    asm volatile(
+        \\ cld
+        \\ rep outsl
+        :
+        : [_] "{esi}" (src),
+          [_] "{dx}" (port),
+          [_] "{ecx}" (count),
+        : "cc"
+    );
+}
+
 pub inline fn in(comptime Type: type, port: u16) Type {
     return switch (Type) {
         u8 => asm volatile (

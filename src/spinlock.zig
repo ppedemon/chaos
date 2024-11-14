@@ -1,7 +1,7 @@
+const console = @import("console.zig");
 const memlayout = @import("memlayout.zig");
 const mmu = @import("mmu.zig");
 const proc = @import("proc.zig");
-const sh = @import("sh.zig");
 const string = @import("string.zig");
 const x86 = @import("x86.zig");
 
@@ -27,7 +27,7 @@ pub const SpinLock = struct {
     pub fn acquire(self: *Self) void {
         pushcli();
         if (self.holding()) {
-            sh.panic("acquire: already holding lock");
+            console.panic("acquire: already holding lock");
         }
 
         while (x86.xchg(&self.locked, 1) != 0) {}
@@ -40,7 +40,7 @@ pub const SpinLock = struct {
 
     pub fn release(self: *Self) void {
         if (!self.holding()) {
-            sh.panic("release: not holding lock");
+            console.panic("release: not holding lock");
         }
         self.pcs[0] = 0;
         self.cpu = null;
@@ -72,7 +72,7 @@ pub fn popcli() void {
     // Validation #1: interrupts must be disabled before discarding a previous cli()
     const eflags = x86.readeflags();
     if ((eflags & mmu.FL_IF) != 0) {
-        sh.panic("popcli: interruptible");
+        console.panic("popcli: interruptible");
     }
 
     const mycpu = proc.mycpu();
@@ -80,7 +80,7 @@ pub fn popcli() void {
 
     // Validation #2: don't pop more than you pushed
     if (mycpu.ncli < 0) {
-        sh.panic("popcli: unbalanced");
+        console.panic("popcli: unbalanced");
     }
 
     if (mycpu.ncli == 0 and mycpu.intena) {

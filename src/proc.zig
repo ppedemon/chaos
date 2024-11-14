@@ -1,9 +1,9 @@
+const console = @import("console.zig");
 const mmu = @import("mmu.zig");
 const file = @import("file.zig");
 const lapic = @import("lapic.zig");
 const mp = @import("mp.zig");
 const param = @import("param.zig");
-const sh = @import("sh.zig");
 const spinlock = @import("spinlock.zig");
 const x86 = @import("x86.zig");
 
@@ -61,7 +61,7 @@ var ptable = struct {
 
 pub fn mycpu() *CPU {
     if ((x86.readeflags() & mmu.FL_IF) != 0) {
-        sh.panic("mycpu: interrupts enabled");
+        console.panic("mycpu: interrupts enabled");
     }
     const apicid = lapic.lapicid();
     for (&mp.cpus) |*c| {
@@ -69,7 +69,7 @@ pub fn mycpu() *CPU {
             return c;
         }
     }
-    sh.panic("mycpu: can't determine cpu");
+    console.panic("mycpu: can't determine cpu");
     unreachable;
 }
 
