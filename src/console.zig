@@ -146,7 +146,7 @@ var input = struct {
     .e = 0,
 };
 
-fn consoleread(ip: *file.Inode, dst: [*]u8, n: u32) ?u32 {
+pub fn consoleread(ip: *file.Inode, dst: [*]u8, n: u32) ?u32 {
     ip.unlock();
     cons.lock.acquire();
     defer {
@@ -186,7 +186,7 @@ fn consoleread(ip: *file.Inode, dst: [*]u8, n: u32) ?u32 {
     return read_count;
 }
 
-fn consolewrite(ip: *file.Inode, buf: []const u8, n: u32) u32 {
+pub fn consolewrite(ip: *file.Inode, buf: []const u8, n: u32) u32 {
     ip.unlock();
     cons.lock.acquire();
     defer {

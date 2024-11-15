@@ -1,9 +1,13 @@
-//! Interfacing ATA devices connected through an IDE cable. For further details, go to:
+//! Interfacing ATA devices connected via IDE. For further details, go to:
 //!   https://wiki.osdev.org/ATA_PIO_Mode
 
 const bio = @import("bio.zig");
+const console = @import("console.zig");
+const fs = @import("fs.zig");
 const ioapic = @import("ioapic.zig");
 const mp = @import("mp.zig");
+const param = @import("param.zig");
+const proc = @import("proc.zig");
 const spinlock = @import("spinlock.zig");
 const trap = @import("trap.zig");
 const x86 = @import("x86.zig");
@@ -21,7 +25,7 @@ const IDE_CMD_RDMUL = 0xc4;
 const IDE_CMD_WRMUL = 0xc5;
 
 var idelock = spinlock.SpinLock.init("ide");
-var idequeue: ?*bio.Buf = undefined;
+var idequeue: ?*bio.Buf = null;
 
 var havedisk1 = false;
 
@@ -59,7 +63,93 @@ pub fn ideinit() void {
     x86.out(0x1F6, @as(u8, 0xE0 | 0 << 4));
 }
 
-// Precondition: caller must hold this idelock
-// fn idestart(b: *bio.Buf) void {
+// Precondition: caller must hold the idelock
+fn idestart(b: *bio.Buf) void {
+    if (b.blockno >= param.FSSIZE) {
+        console.panic("Blockno out of bounds");
+    }
 
-// }
+    const sectors_x_block = fs.BSIZE / SECTOR_SIZE;
+    const sector = b.blockno * sectors_x_block;
+    const readcmd = if (sectors_x_block == 1) IDE_CMD_READ else IDE_CMD_RDMUL;
+    const writecmd = if (sectors_x_block == 1) IDE_CMD_WRITE else IDE_CMD_WRMUL;
+
+    if (sectors_x_block > 7) {
+        console.panic("idestart");
+    }
+
+    // Set current drive
+    // TODO This isn't in xv86 code, but feels necessary? Is is really like that?
+    x86.out(0x1F6, @as(u8, 0xE0 | (b.dev & 1) << 4));
+
+    idewait(false) orelse unreachable; // Wait until current drive is ready
+    x86.out(0x3F6, 0); // Ensure we generate interrupts on current drive
+    x86.out(0x1F2, sectors_x_block); // Number of sectors to read/write
+
+    // LBA addresses consist of 28 bits like this:
+    //   0-7:   Sector number (port 0x1F3)
+    //   8-15:  Cylinder number (low) (port 0x1F4)
+    //   16-23: Cylinder number (high) (port 0x1F5)
+    //   24-27: Head number (port 0x1F6)
+    // The byte to put in port 0x1F6 is: 111[Drive#][Head#]
+    x86.out(0x1F3, @as(u8, sector & 0xFF));
+    x86.out(0x1F4, @as(u8, (sector >> 8) & 0xFF));
+    x86.out(0x1F5, @as(u8, (sector >> 16) & 0xFF));
+    x86.out(0x1F6, @as(u8, 0xe0) | @as(u8, (b.dev & 1) << 4) | @as(u8, (sector >> 24) & 0x0F));
+
+    if (b.flags & bio.B_DIRTY != 0) {
+        x86.out(0x1F7, writecmd);
+        x86.outsl(0x1F0, @intFromPtr(&b.data), fs.BSIZE / 4);
+    } else {
+        x86.out(0x1F7, readcmd);
+    }
+}
+
+pub fn ideintr() void {
+    idelock.acquire();
+    defer idelock.release();
+
+    const b = idequeue orelse return;
+    idequeue = b.qnext;
+
+    if ((b.flags & bio.B_DIRTY) == 0 & idewait(true)) {
+        x86.insl(0x1F0, @intFromPtr(&b.data), fs.BSIZE / 4);
+    }
+
+    b.flags |= bio.B_VALID;
+    b.flags &= ~(bio.B_DIRTY);
+    proc.wakeup(@intFromPtr(b));
+
+    if (idequeue != null) {
+        idestart(idequeue);
+    }
+}
+
+pub fn iderw(b: *bio.Buf) void {
+    if (!b.lock.holding()) {
+        console.panic("iderw: buf not locked");
+    }
+    if (b.flags & (bio.B_VALID | bio.B_DIRTY) == bio.B_VALID) {
+        console.panic("iderw: nothing to do");
+    }
+    if (b.dev != 0 and !havedisk1) {
+        console.panic("idewr: disk 1 not present");
+    }
+
+    idelock.acquire();
+    defer idelock.release();
+
+    b.qnext = null;
+
+    var p = &idequeue;
+    while (p.* != null) : (p = &p.*.?.qnext) {}
+    p.* = b;
+
+    if (idequeue == b) {
+        idestart(idequeue);
+    }
+
+    while ((b.flags) & (bio.B_VALID|bio.B_DIRTY) != bio.B_VALID) {
+        proc.sleep(@intFromPtr(b), &idelock);
+    }
+}

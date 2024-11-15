@@ -35,8 +35,35 @@ fn scrollup() void {
     @memset(framebuf[pos .. pos + 24 * 80 - pos], ' ');
 }
 
+const Buf = struct {
+    n: u32,
+    next: ?*Buf = null,
+};
+
+var head: ?*Buf = null;
+
+fn append(n: *Buf) void {
+    var p = &head;
+    while (p.* != null) : (p = &p.*.?.next) {}
+    p.* = n;
+}
+
 pub fn main() void {
-    init();
-    scrollup();
-    show();
+    var n = Buf{.n = 1};
+    append(&n);
+
+    var u = Buf{.n = 2};
+    append(&u);
+
+    var v = Buf{.n = 3};
+    append(&v);
+
+    var p = head;
+    while (p != null) : (p = p.?.next) {
+        std.debug.print("Node: {d}\n", .{p.?.n});
+    }
+
+    // init();
+    // scrollup();
+    // show();
 }
