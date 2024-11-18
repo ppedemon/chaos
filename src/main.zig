@@ -75,6 +75,9 @@ export fn main() align(16) noreturn {
 
     x86.sti();
 
+    const b = bio.Buf.read(0, 1);
+    console.cprintf("Got buffer for dev {d}\n", .{b.dev});
+
     while (true) {}
 }
 

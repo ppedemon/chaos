@@ -89,7 +89,7 @@ pub fn sleep(chan: usize, lock: *spinlock.SpinLock) void {
     const p = myproc();
 
     // Acquire ptable.lock first, then call sched().
-    // Once we hold patable.lock, we can be guaranteed we wont miss any
+    // Once we hold patable.lock, we can be guaranteed we won't miss any
     // wakeup calls, since wakeup() needs to acquire ptable's lock.
     //
     // See: https://pdos.csail.mit.edu/6.828/2012/xv6/book-rev7.pdf, page 57.

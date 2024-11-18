@@ -44,7 +44,9 @@ fn idewait(checkerr: bool) ?void {
 }
 
 pub fn ideinit() void {
-    ioapic.ioapicenable(trap.IRQ_IDE, mp.ncpu);
+    // TODO Assign IQR_IDE to last CPU whan we activte all of them. For now, direct to to CPU #0 as the rest.
+    //ioapic.ioapicenable(trap.IRQ_IDE, mp.ncpu);
+    ioapic.ioapicenable(trap.IRQ_IDE, 0);
 
     // Check if disk #0 is present
     x86.out(0x1F6, @as(u8, 0xE0 | 0 << 4));
@@ -69,21 +71,20 @@ fn idestart(b: *bio.Buf) void {
         console.panic("Blockno out of bounds");
     }
 
-    const sectors_x_block = fs.BSIZE / SECTOR_SIZE;
+    const sectors_x_block: u8 = fs.BSIZE / SECTOR_SIZE;
     const sector = b.blockno * sectors_x_block;
-    const readcmd = if (sectors_x_block == 1) IDE_CMD_READ else IDE_CMD_RDMUL;
-    const writecmd = if (sectors_x_block == 1) IDE_CMD_WRITE else IDE_CMD_WRMUL;
+    const readcmd: u8 = if (sectors_x_block == 1) IDE_CMD_READ else IDE_CMD_RDMUL;
+    const writecmd: u8 = if (sectors_x_block == 1) IDE_CMD_WRITE else IDE_CMD_WRMUL;
 
     if (sectors_x_block > 7) {
         console.panic("idestart");
     }
 
     // Set current drive
-    // TODO This isn't in xv86 code, but feels necessary? Is is really like that?
-    x86.out(0x1F6, @as(u8, 0xE0 | (b.dev & 1) << 4));
+    x86.out(0x1F6, 0xE0 | @as(u8, @intCast(b.dev & 1)) << 4);
 
     idewait(false) orelse unreachable; // Wait until current drive is ready
-    x86.out(0x3F6, 0); // Ensure we generate interrupts on current drive
+    x86.out(0x3F6, @as(u8, 0)); // Ensure we generate interrupts on current drive
     x86.out(0x1F2, sectors_x_block); // Number of sectors to read/write
 
     // LBA addresses consist of 28 bits like this:
@@ -92,10 +93,12 @@ fn idestart(b: *bio.Buf) void {
     //   16-23: Cylinder number (high) (port 0x1F5)
     //   24-27: Head number (port 0x1F6)
     // The byte to put in port 0x1F6 is: 111[Drive#][Head#]
-    x86.out(0x1F3, @as(u8, sector & 0xFF));
-    x86.out(0x1F4, @as(u8, (sector >> 8) & 0xFF));
-    x86.out(0x1F5, @as(u8, (sector >> 16) & 0xFF));
-    x86.out(0x1F6, @as(u8, 0xe0) | @as(u8, (b.dev & 1) << 4) | @as(u8, (sector >> 24) & 0x0F));
+    x86.out(0x1F3, @as(u8, @intCast(sector & 0xFF)));
+    x86.out(0x1F4, @as(u8, @intCast((sector >> 8) & 0xFF)));
+    x86.out(0x1F5, @as(u8, @intCast((sector >> 16) & 0xFF)));
+    x86.out(0x1F6, 0xE0 |
+        @as(u8, @intCast(b.dev & 1)) << 4 |
+        @as(u8, @intCast((sector >> 24) & 0x0F)));
 
     if (b.flags & bio.B_DIRTY != 0) {
         x86.out(0x1F7, writecmd);
@@ -112,16 +115,32 @@ pub fn ideintr() void {
     const b = idequeue orelse return;
     idequeue = b.qnext;
 
-    if ((b.flags & bio.B_DIRTY) == 0 & idewait(true)) {
-        x86.insl(0x1F0, @intFromPtr(&b.data), fs.BSIZE / 4);
+    b.data[1] = 0xFF;
+
+    // Set current drive and wait until ready
+    x86.out(0x1F6, 0xE0 | @as(u8, @intCast(b.dev & 1)) << 4);
+    if (idewait(true)) |_| {
+        if ((b.flags & bio.B_DIRTY) == 0) {
+            x86.insl(0x1F0, @intFromPtr(&b.data), fs.BSIZE / 4);
+        }
     }
 
     b.flags |= bio.B_VALID;
-    b.flags &= ~(bio.B_DIRTY);
+    b.flags &= ~@as(u32, bio.B_DIRTY);
     proc.wakeup(@intFromPtr(b));
 
-    if (idequeue != null) {
-        idestart(idequeue);
+    if (idequeue) |q| {
+        idestart(q);
+    }
+
+    console.cprintf("Done processing block {d}:{d}, data is:\n", .{ b.dev, b.blockno });
+    for (0..128) |i| {
+        console.cprintf("{x:0<2} ", .{b.data[i]});
+        if ((i + 1) % 16 == 0) {
+            console.cprintf("\n", .{});
+        } else if ((i + 1) % 8 == 0) {
+            console.cprintf("    ", .{});
+        }
     }
 }
 
@@ -145,11 +164,12 @@ pub fn iderw(b: *bio.Buf) void {
     while (p.* != null) : (p = &p.*.?.qnext) {}
     p.* = b;
 
-    if (idequeue == b) {
-        idestart(idequeue);
+    if (idequeue.? == b) {
+        idestart(idequeue.?);
     }
 
-    while ((b.flags) & (bio.B_VALID|bio.B_DIRTY) != bio.B_VALID) {
-        proc.sleep(@intFromPtr(b), &idelock);
-    }
+    // TODO Enable back after debugging
+    // while ((b.flags) & (bio.B_VALID | bio.B_DIRTY) != bio.B_VALID) {
+    //     proc.sleep(@intFromPtr(b), &idelock);
+    // }
 }

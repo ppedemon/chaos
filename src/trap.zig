@@ -1,4 +1,5 @@
 const console = @import("console.zig");
+const ide = @import("ide.zig");
 const kbd = @import("kbd.zig");
 const mmu = @import("mmu.zig");
 const lapic = @import("lapic.zig");
@@ -90,7 +91,8 @@ export fn trap(tf: *x86.TrapFrame) void {
       lapic.lapiceoi();
     },
     T_IRQ0 + IRQ_IDE => {
-      // TODO Implement
+      ide.ideintr();
+      lapic.lapiceoi();
     },
     else => {
       console.panic("Unhandled Exception");
