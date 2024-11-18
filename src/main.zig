@@ -26,16 +26,6 @@ var buf: [32]u8 = undefined;
 //     return p.*;
 // }
 
-fn locktest() void {
-    var lock = spinlock.SpinLock.init("test");
-    lock.acquire();
-    lock.release();
-    lock.acquire();
-    lock.release();
-    lock.acquire();
-    lock.release();
-}
-
 export fn main() align(16) noreturn {
     const end_addr = @intFromPtr(&end);
 
@@ -60,7 +50,6 @@ export fn main() align(16) noreturn {
         p = curr.next;
     }
 
-    locktest();
     const cpu = proc.mycpu();
 
     console.consclear();
