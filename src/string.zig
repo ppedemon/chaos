@@ -1,4 +1,3 @@
-const console = @import("console.zig");
 const x86 = @import("x86.zig");
 
 pub fn memset(dst: usize, data: u8, n: usize) void {

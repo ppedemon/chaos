@@ -42,6 +42,7 @@ export fn main() align(16) noreturn {
     ide.ideinit();
     trap.tvinit();
     trap.idtinit();
+    kalloc.kinit2(memlayout.p2v(4 * 1024 * 1024), memlayout.p2v(memlayout.PHYSTOP));
 
     var len: usize = 0;
     var p = kalloc.kmem.freelist;

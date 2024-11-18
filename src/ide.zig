@@ -168,7 +168,7 @@ pub fn iderw(b: *bio.Buf) void {
         idestart(idequeue.?);
     }
 
-    // TODO Enable back after debugging
+    // TODO Enable back after testing
     // while ((b.flags) & (bio.B_VALID | bio.B_DIRTY) != bio.B_VALID) {
     //     proc.sleep(@intFromPtr(b), &idelock);
     // }

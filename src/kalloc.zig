@@ -23,6 +23,10 @@ pub var kmem = struct {
 pub fn kinit1(vstart: usize, vend: usize) void {
     freerange(vstart, vend);
 }
+pub fn kinit2(vstart: usize, vend: usize) void {
+    freerange(vstart, vend);
+    kmem.use_lock = true;
+}
 
 fn freerange(vstart: usize, vend: usize) void {
     var p = mmu.pgroundup(vstart);
@@ -38,12 +42,22 @@ fn kfree(v: usize) void {
 
     string.memset(v, 1, mmu.PGSIZE);
 
+    if (kmem.use_lock) {
+        kmem.lock.acquire();
+        defer kmem.lock.release();
+    }
+
     const run: *Run = @ptrFromInt(v);
     run.next = kmem.freelist;
     kmem.freelist = run;
 }
 
 pub fn kalloc() ?usize {
+    if (kmem.use_lock) {
+        kmem.lock.acquire();
+        defer kmem.lock.release();
+    }
+
     const opt_ptr = kmem.freelist;
     if (opt_ptr) |ptr| {
         kmem.freelist = ptr.next;

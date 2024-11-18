@@ -39,7 +39,7 @@ pub const Buf = struct {
     }
 
     pub fn release(self: *Self) void {
-        if (self.lock.holding()) {
+        if (!self.lock.holding()) {
             console.panic("brelease: not holding lock");
         }
         self.lock.release();

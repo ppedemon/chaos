@@ -26,7 +26,7 @@ pub const SleepLock = struct {
     }
     self.locked = true;
     
-    // TODO Enable back after debugging
+    // TODO Enable back after testing
     //self.pid = proc.myproc().pid;
   }
 
@@ -41,7 +41,7 @@ pub const SleepLock = struct {
     self.lk.acquire();
     defer self.lk.release();
 
-    // TODO Enable back after debugging
+    // TODO Enable back after testing
     // return self.locked and (self.pid == proc.myproc().pid);
     return true;
   }
