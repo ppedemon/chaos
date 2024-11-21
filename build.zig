@@ -34,6 +34,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/entry.zig"),
         .target = target,
         .optimize = optimize,
+        .linkage = .static,
     });
     kernel.addObject(main);
     kernel.addAssemblyFile(b.path("src/trap.S"));

@@ -17,7 +17,7 @@ pub const Inode = struct {
     lk: sleeplock.SleepLock, // Protects data below
 
     valid: u32, // Has node been read from disk?
-    ty: u16, // Copy of disk inode
+    ty: u16, // Type of disk inode
     major: u16,
     minor: u16,
     nlink: u16,

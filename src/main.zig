@@ -1,5 +1,6 @@
 const bio = @import("bio.zig");
 const console = @import("console.zig");
+const fs = @import("fs.zig");
 const ide = @import("ide.zig");
 const ioapic = @import("ioapic.zig");
 const kalloc = @import("kalloc.zig");
@@ -65,8 +66,9 @@ export fn main() align(16) noreturn {
 
     x86.sti();
 
-    const b = bio.Buf.read(0, 1);
-    console.cprintf("Got buffer for dev {d}\n", .{b.dev});
+    // fs.readsb(0, &fs.superblock);
+    // for (0..1_000_000) |_| {}
+    // _ = fs.ialloc(0, 1);
 
     while (true) {}
 }

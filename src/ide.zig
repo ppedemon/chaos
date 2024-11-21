@@ -132,16 +132,6 @@ pub fn ideintr() void {
     if (idequeue) |q| {
         idestart(q);
     }
-
-    console.cprintf("Done processing block {d}:{d}, data is:\n", .{ b.dev, b.blockno });
-    for (0..128) |i| {
-        console.cprintf("{x:0<2} ", .{b.data[i]});
-        if ((i + 1) % 16 == 0) {
-            console.cprintf("\n", .{});
-        } else if ((i + 1) % 8 == 0) {
-            console.cprintf("    ", .{});
-        }
-    }
 }
 
 pub fn iderw(b: *bio.Buf) void {
