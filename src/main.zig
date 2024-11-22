@@ -20,12 +20,14 @@ const kstacksize = @import("param.zig").KSTACKSIZE;
 
 extern const end: u8;
 
-var buf: [32]u8 = undefined;
+//var buf: [32]u8 = undefined;
 
 // fn readstack(esp: usize) usize {
 //     const p: *const usize = @ptrFromInt(esp);
 //     return p.*;
 // }
+
+const initcode: []const u8 = @embedFile("initcode.bin");
 
 export fn main() align(16) noreturn {
     const end_addr = @intFromPtr(&end);
@@ -69,6 +71,15 @@ export fn main() align(16) noreturn {
     // fs.readsb(0, &fs.superblock);
     // for (0..1_000_000) |_| {}
     // _ = fs.ialloc(0, 1);
+
+    for (initcode, 0..) |c, i| {
+        console.cprintf("{x:0>2} ", .{c});
+        if ((i + 1) % 16 == 0) {
+            console.cprintf("\n", .{});
+        } else if ((i+1) % 8 == 0) {
+            console.cprintf("    ", .{});
+        }
+    }
 
     while (true) {}
 }

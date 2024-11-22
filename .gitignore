@@ -1,4 +1,6 @@
 .zig-cache/
 zig-out/
 
+src/initcode.bin
+
 fs.img

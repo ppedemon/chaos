@@ -22,6 +22,20 @@ pub fn build(b: *std.Build) void {
         //.cpu_features_add = enabled_features,
     });
 
+    const initCode = b.addAssembly(.{
+        .name = "initcode",
+        .source_file = b.path("init/initcode.S"),
+        .target = target,
+        .optimize = .ReleaseSmall,
+    });
+    initCode.setLinkerScriptPath(b.path("init/initcode.ld"));
+
+    const initCodeBin = b.addObjCopy(initCode.getEmittedBin(), .{
+        .basename = "initcode.bin",
+        .format = .bin,
+    });
+    const initCodeInstall = b.addInstallFile(initCodeBin.getOutput(), "../src/initcode.bin");
+
     const main = b.addObject(.{
         .name = "main",
         .root_source_file = b.path("src/main.zig"),
@@ -40,6 +54,7 @@ pub fn build(b: *std.Build) void {
     kernel.addAssemblyFile(b.path("src/trap.S"));
     kernel.addAssemblyFile(b.path("src/vector.S"));
     kernel.setLinkerScriptPath(b.path("kernel.ld"));
+    kernel.step.dependOn(&initCodeInstall.step);
 
     b.installArtifact(kernel);
 
