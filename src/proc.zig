@@ -1,10 +1,12 @@
 const console = @import("console.zig");
+const kalloc = @import("kalloc.zig");
 const mmu = @import("mmu.zig");
 const file = @import("file.zig");
 const lapic = @import("lapic.zig");
 const mp = @import("mp.zig");
 const param = @import("param.zig");
 const spinlock = @import("spinlock.zig");
+const string = @import("string.zig");
 const x86 = @import("x86.zig");
 
 pub const CPU = extern struct {
@@ -51,13 +53,17 @@ pub const Proc = struct {
     name: []const u8,
 };
 
+extern fn trapret() void;
+
 var ptable = struct {
     lock: spinlock.SpinLock,
     proc: [param.NPROC]Proc,
-} {
+}{
     .lock = spinlock.SpinLock.init("ptable"),
     .proc = undefined,
 };
+
+var nextpid: usize = 1;
 
 pub fn mycpu() *CPU {
     if ((x86.readeflags() & mmu.FL_IF) != 0) {
@@ -83,6 +89,78 @@ pub fn myproc() *Proc {
     defer spinlock.popcli();
     const c = mycpu();
     return c.proc;
+}
+
+// allocproc: allocate a new process in ptable and setup its kstack.
+// kstack is setup such that it works when a process is created by fork or it's the 1st process.
+// For this, we want it to enter forkret, and then return to trapret. We need to:
+//
+//   1. Allocate a page for the kstack
+//   2. Push an empty TrapFrame on the kstack (to be filled by fork, left empty for 1st process)
+//   3. Push a fake return address to trapret (see trap.S) on the kstack
+//   4. Push an empty Context on top of the kstack.
+//   5. So set Context.eip = forkret (the kernel thread will start executing with register contents from Context)
+//
+// We are done. The context switching code will set the stack pointer one past the Context.
+// That is, pointing at the trapret return address. This is where forkret will return.
+// Then, trapret restores user registers and enters the new process.
+// 
+pub fn allocproc() ?*Proc {
+    ptable.lock.acquire();
+
+    for (&ptable.proc) |*p| {
+        if (p.state == ProcState.UNUSED) {
+            p.state = ProcState.EMBRYO;
+            p.pid = nextpid;
+            nextpid += 1;
+
+            // By setting state = EMBRYO, slot is no longer available, we can release the lock now
+            ptable.lock.release();
+
+            // Alloc kstack, set sp
+            p.kstack = kalloc.kalloc() orelse {
+                p.state = ProcState.UNUSED;
+                return null;
+            };
+            var sp = p.kstack + param.KSTACKSIZE;
+
+            // Put TrapFrame in kstack
+            sp -= @sizeOf(x86.TrapFrame);
+            p.tf = @ptrFromInt(sp);
+
+            // Set ret address = trapframe
+            sp -= 4;
+            const ret_ptr = @as(*usize, @ptrFromInt(sp));
+            ret_ptr.* = @intFromPtr(&trapret);
+
+            // Put a context with eip pointing to forkret
+            sp -= @sizeOf(Context);
+            p.context = @ptrFromInt(sp);
+            string.memset(sp, 0, @sizeOf(Context));
+            p.context.?.eip = @intFromPtr(&forkret);
+
+            return p;
+        }
+    }
+
+    ptable.lock.release();
+    return null;
+}
+
+fn forkret() void {
+    const static = struct {
+        var first: bool = true;
+    };
+
+    // Held by scheduler
+    ptable.lock.release();
+
+    if (static.first) {
+        static.first = false;
+        // TODO init inodes and log writer
+    }
+
+    // This returns to trapret (see allocproc)
 }
 
 pub fn sleep(chan: usize, lock: *spinlock.SpinLock) void {
