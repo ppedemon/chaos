@@ -1,5 +1,4 @@
 const bio = @import("bio.zig");
-const console = @import("console.zig");
 const file = @import("file.zig");
 const param = @import("param.zig");
 const sleeplock = @import("sleeplock.zig");
@@ -93,7 +92,7 @@ fn balloc(dev: u32) u32 {
         }
         bp.release();
     }
-    console.panic("balloc: no free blocks");
+    @panic("balloc: no free blocks");
 }
 
 fn bfree(dev: u32, blockno: u32) void {
@@ -101,7 +100,7 @@ fn bfree(dev: u32, blockno: u32) void {
     const bi = blockno % BPB;
     const n = @as(u8, 1) << @intCast(bi % 8);
     if (bp.data[bi / 8] & n == 0) {
-        console.panic("bfree: block not in use");
+        @panic("bfree: block not in use");
     }
     bp.data[bi / 8] &= ~n;
     // TODO Write to log
@@ -143,5 +142,5 @@ pub fn ialloc(dev: u32, ty: u16) *file.Inode {
         }
         b.release();
     }
-    console.panic("ialloc: no free inodes");
+    @panic("ialloc: no free inodes");
 }

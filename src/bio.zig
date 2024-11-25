@@ -1,4 +1,3 @@
-const console = @import("console.zig");
 const fs = @import("fs.zig");
 const ide = @import("ide.zig");
 const param = @import("param.zig");
@@ -32,7 +31,7 @@ pub const Buf = struct {
 
     pub fn write(self: *Self) void {
         if (!self.lock.holding()) {
-            console.panic("bwrite: not holding lock");
+            @panic("bwrite: not holding lock");
         }
         self.flags |= B_DIRTY;
         ide.iderw(self);
@@ -40,7 +39,7 @@ pub const Buf = struct {
 
     pub fn release(self: *Self) void {
         if (!self.lock.holding()) {
-            console.panic("brelease: not holding lock");
+            @panic("brelease: not holding lock");
         }
         self.lock.release();
 
@@ -115,5 +114,5 @@ fn bget(dev: u32, blockno: u32) *Buf {
     }
 
     // Not supposed to get here
-    console.panic("bget: no buffers");
+    @panic("bget: no buffers");
 }

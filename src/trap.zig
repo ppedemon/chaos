@@ -1,4 +1,3 @@
-const console = @import("console.zig");
 const ide = @import("ide.zig");
 const kbd = @import("kbd.zig");
 const mmu = @import("mmu.zig");
@@ -95,7 +94,7 @@ export fn trap(tf: *x86.TrapFrame) void {
       lapic.lapiceoi();
     },
     else => {
-      console.panic("Unhandled Exception");
+      @panic("Unhandled Exception");
     },
   }
 }

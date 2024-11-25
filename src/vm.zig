@@ -1,4 +1,3 @@
-const console = @import("console.zig");
 const kalloc = @import("kalloc.zig");
 const mmu = @import("mmu.zig");
 const memlayout = @import("memlayout.zig");
@@ -41,7 +40,7 @@ extern fn set_segregs() void;
 pub fn seginit() void {
     var cpu = proc.mycpu();
     if (proc.cpuid() != 0) {
-        console.panic("segint: not running on cpu #0");
+        @panic("segint: not running on cpu #0");
     }
 
     cpu.gdt[mmu.SEG_KCODE] = mmu.SegDesc.new(mmu.STA_X|mmu.STA_R, 0, 0xFFFF_FFFF, mmu.DPL_KERNEL);
@@ -94,7 +93,7 @@ fn mappages(pgdir: [*]mmu.PdEntry, va: usize, size: usize, pa: usize, perm: usiz
     while (true) {
         const pte = walkpgdir(pgdir, virt_addr, true) orelse return false;
         if (pte.* & mmu.PTE_P != 0) {
-            console.panic("remap");
+            @panic("remap");
         }
         pte.* = phys_addr | perm | mmu.PTE_P;
 
@@ -111,7 +110,7 @@ fn mappages(pgdir: [*]mmu.PdEntry, va: usize, size: usize, pa: usize, perm: usiz
 
 fn setupkvm() ?[*]mmu.PdEntry {
     if (memlayout.PHYSTOP > memlayout.DEVSPACE) {
-        console.panic("PHYSTOP too high");
+        @panic("PHYSTOP too high");
     }
 
     const pgdir_va = kalloc.kalloc() orelse return null;
@@ -164,4 +163,18 @@ fn switchkvm() void {
 pub fn kvmalloc() ?void {
     kpgdir = setupkvm() orelse return null;
     switchkvm();
+}
+
+pub fn inituvm(pgdir: [*]mmu.PdEntry, src: []const u8) void {
+    if (src.len > mmu.PGSIZE) {
+        @panic("inituvm: more than one page");
+    }
+
+    const mem = kalloc.kalloc() orelse unreachable;
+    string.memset(mem, 0, mmu.PGSIZE);
+    const succ = mappages(pgdir, 0, mmu.PGSIZE, memlayout.v2p(mem), mmu.PTE_W | mmu.PTE_U);
+    if (!succ) {
+        @panic("inituvm: no free pages");
+    }
+    string.memmove(mem, @intFromPtr(&src), src.len);
 }

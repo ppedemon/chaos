@@ -1,4 +1,3 @@
-const console = @import("console.zig");
 const kalloc = @import("kalloc.zig");
 const mmu = @import("mmu.zig");
 const file = @import("file.zig");
@@ -39,21 +38,23 @@ pub const Context = extern struct {
 
 pub const Proc = struct {
     sz: usize,
-    pgdir: *mmu.PdEntry,
+    pgdir: [*]mmu.PdEntry,
     kstack: usize,
     state: ProcState,
     pid: u32,
     parent: ?*Proc,
-    tf: ?*x86.TrapFrame,
-    context: ?*Context,
+    tf: *x86.TrapFrame,
+    context: *Context,
     chan: usize,
     killed: bool,
     ofile: *[param.NPROCFILE]file.File,
     cwd: ?*file.Inode,
-    name: []const u8,
+    name: [15:0]u8,
 };
 
 extern fn trapret() void;
+
+pub const initcode: []const u8 = @embedFile("initcode.bin");
 
 var ptable = struct {
     lock: spinlock.SpinLock,
@@ -67,7 +68,7 @@ var nextpid: usize = 1;
 
 pub fn mycpu() *CPU {
     if ((x86.readeflags() & mmu.FL_IF) != 0) {
-        console.panic("mycpu: interrupts enabled");
+        @panic("mycpu: interrupts enabled");
     }
     const apicid = lapic.lapicid();
     for (&mp.cpus) |*c| {
@@ -75,8 +76,7 @@ pub fn mycpu() *CPU {
             return c;
         }
     }
-    console.panic("mycpu: can't determine cpu");
-    unreachable;
+    @panic("mycpu: can't determine cpu");
 }
 
 pub fn cpuid() u32 {
@@ -137,7 +137,7 @@ pub fn allocproc() ?*Proc {
             sp -= @sizeOf(Context);
             p.context = @ptrFromInt(sp);
             string.memset(sp, 0, @sizeOf(Context));
-            p.context.?.eip = @intFromPtr(&forkret);
+            p.context.eip = @intFromPtr(&forkret);
 
             return p;
         }
@@ -145,6 +145,10 @@ pub fn allocproc() ?*Proc {
 
     ptable.lock.release();
     return null;
+}
+
+pub fn userinit() void {
+    //const p = allocproc() orelse std.buil
 }
 
 fn forkret() void {

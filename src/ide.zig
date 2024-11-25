@@ -2,7 +2,6 @@
 //!   https://wiki.osdev.org/ATA_PIO_Mode
 
 const bio = @import("bio.zig");
-const console = @import("console.zig");
 const fs = @import("fs.zig");
 const ioapic = @import("ioapic.zig");
 const mp = @import("mp.zig");
@@ -68,7 +67,7 @@ pub fn ideinit() void {
 // Precondition: caller must hold the idelock
 fn idestart(b: *bio.Buf) void {
     if (b.blockno >= param.FSSIZE) {
-        console.panic("Blockno out of bounds");
+        @panic("Blockno out of bounds");
     }
 
     const sectors_x_block: u8 = fs.BSIZE / SECTOR_SIZE;
@@ -77,7 +76,7 @@ fn idestart(b: *bio.Buf) void {
     const writecmd: u8 = if (sectors_x_block == 1) IDE_CMD_WRITE else IDE_CMD_WRMUL;
 
     if (sectors_x_block > 7) {
-        console.panic("idestart");
+        @panic("idestart");
     }
 
     // Set current drive
@@ -136,13 +135,13 @@ pub fn ideintr() void {
 
 pub fn iderw(b: *bio.Buf) void {
     if (!b.lock.holding()) {
-        console.panic("iderw: buf not locked");
+        @panic("iderw: buf not locked");
     }
     if (b.flags & (bio.B_VALID | bio.B_DIRTY) == bio.B_VALID) {
-        console.panic("iderw: nothing to do");
+        @panic("iderw: nothing to do");
     }
     if (b.dev != 0 and !havedisk1) {
-        console.panic("idewr: disk 1 not present");
+        @panic("idewr: disk 1 not present");
     }
 
     idelock.acquire();

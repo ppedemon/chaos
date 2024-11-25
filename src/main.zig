@@ -1,3 +1,5 @@
+const builtin = @import("std").builtin;
+
 const bio = @import("bio.zig");
 const console = @import("console.zig");
 const fs = @import("fs.zig");
@@ -20,20 +22,22 @@ const kstacksize = @import("param.zig").KSTACKSIZE;
 
 extern const end: u8;
 
-//var buf: [32]u8 = undefined;
 
 // fn readstack(esp: usize) usize {
 //     const p: *const usize = @ptrFromInt(esp);
 //     return p.*;
 // }
 
-const initcode: []const u8 = @embedFile("initcode.bin");
+// Install global panic function: this will be called by @panic(msg)
+pub fn panic(msg: []const u8, _: ?*builtin.StackTrace, _: ?usize) noreturn {
+    console.panic(msg);
+}
 
 export fn main() align(16) noreturn {
     const end_addr = @intFromPtr(&end);
 
     kalloc.kinit1(end_addr, memlayout.p2v(4 * 1024 * 1024));
-    vm.kvmalloc() orelse console.panic("kvmalloc");
+    vm.kvmalloc() orelse @panic("kvmalloc");
     mp.mpinit();
     lapic.lapicinit();
     vm.seginit();
@@ -68,7 +72,7 @@ export fn main() align(16) noreturn {
 
     const popt = proc.allocproc();
     if (popt) |pr| {
-        console.cprintf("Jumping to: 0x{x}\n", .{pr.context.?.eip});
+        console.cprintf("Jumping to: 0x{x}\n", .{pr.context.eip});
         const kp = @as([*]const usize, @ptrFromInt(pr.kstack));
         const ret = kp[(4096 - @sizeOf(x86.TrapFrame)) / @sizeOf(usize) - 1];
         console.cprintf("Returning to: 0x{x}\n", .{ret});
@@ -80,14 +84,14 @@ export fn main() align(16) noreturn {
     // for (0..1_000_000) |_| {}
     // _ = fs.ialloc(0, 1);
 
-    // for (initcode, 0..) |c, i| {
-    //     console.cprintf("{x:0>2} ", .{c});
-    //     if ((i + 1) % 16 == 0) {
-    //         console.cprintf("\n", .{});
-    //     } else if ((i+1) % 8 == 0) {
-    //         console.cprintf("    ", .{});
-    //     }
-    // }
+    for (proc.initcode, 0..) |c, i| {
+        console.cprintf("{x:0>2} ", .{c});
+        if ((i + 1) % 16 == 0) {
+            console.cprintf("\n", .{});
+        } else if ((i+1) % 8 == 0) {
+            console.cprintf("    ", .{});
+        }
+    }
 
     while (true) {}
 }

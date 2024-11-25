@@ -1,7 +1,6 @@
 //! IOAPIC configuration. For the full details, check manual at:
 //!   - https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
 
-const console = @import("console.zig");
 const mp = @import("mp.zig");
 const trap = @import("trap.zig");
 
@@ -42,7 +41,7 @@ pub fn ioapicinit() void {
     const maxintr = (ioapic.read(REG_VER) >> 16) & 0xFF;
     const id = (ioapic.read(REG_ID) >> 24) & 0x0F;
     if (id != mp.ioapicid) {
-        console.panic("Unrecognized IOAPIC id");
+        @panic("Unrecognized IOAPIC id");
     }
 
     var i: u32 = 0;

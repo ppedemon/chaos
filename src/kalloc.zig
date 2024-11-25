@@ -1,4 +1,3 @@
-const console = @import("console.zig");
 const memlayout = @import("memlayout.zig");
 const mmu = @import("mmu.zig");
 const string = @import("string.zig");
@@ -37,7 +36,7 @@ fn freerange(vstart: usize, vend: usize) void {
 
 fn kfree(v: usize) void {
     if (v % mmu.PGSIZE != 0 or v < @intFromPtr(&end) or memlayout.v2p(v) >= memlayout.PHYSTOP) {
-        console.panic("kfree");
+        @panic("kfree");
     }
 
     string.memset(v, 1, mmu.PGSIZE);
