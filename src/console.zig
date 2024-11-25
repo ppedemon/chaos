@@ -158,7 +158,7 @@ pub fn consoleread(ip: *file.Inode, dst: [*]u8, n: u32) ?u32 {
     while (read_count < n) {
         // Sleep while no input, leave if killed while sleeping
         while (input.r == input.w) {
-            if (proc.myproc().killed) {
+            if (proc.myproc().?.killed) {
                 return null;
             }
             proc.sleep(@intFromPtr(&input.r), &cons.lock);

@@ -17,7 +17,7 @@ pub const CPU = extern struct {
     started: bool,
     ncli: u32,
     intena: bool,
-    proc: *Proc,
+    proc: ?*Proc,
 };
 
 pub const ProcState = enum {
@@ -87,7 +87,7 @@ pub fn cpuid() u32 {
 }
 
 // Disable interrupts, so no scheduling happens while reading the proc from the CPU
-pub fn myproc() *Proc {
+pub fn myproc() ?*Proc {
     spinlock.pushcli();
     defer spinlock.popcli();
     const c = mycpu();
@@ -192,7 +192,7 @@ fn forkret() void {
 }
 
 pub fn sleep(chan: usize, lock: *spinlock.SpinLock) void {
-    const p = myproc();
+    const p = myproc() orelse @panic("sleep: no process");
 
     // Acquire ptable.lock first, then call sched().
     // Once we hold patable.lock, we can be guaranteed we won't miss any

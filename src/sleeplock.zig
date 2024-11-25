@@ -27,7 +27,7 @@ pub const SleepLock = struct {
     self.locked = true;
     
     // TODO Enable back after testing
-    //self.pid = proc.myproc().pid;
+    //self.pid = proc.myproc().?.pid;
   }
 
   pub fn release(self: *Self) void {
