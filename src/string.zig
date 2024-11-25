@@ -27,6 +27,18 @@ pub fn memmove(dst: usize, src: usize, n: usize) void {
     }
 }
 
+pub fn safecpy(dst: [:0]u8, src: []const u8) void {
+    const len = @min(dst.len, src.len);
+    @memset(dst, 0);
+    @memcpy(dst[0..len], src[0..len]);
+}
+
+pub fn safeslice(s: [:0]u8) []u8 {
+    var i: usize = 0;
+    while (s[i] != 0 and i < s.len) : (i += 1) {}
+    return s[0..i];
+}
+
 pub fn sprintn(x: anytype, buf: []u8) usize {
     var n: usize = 0;
     var c = x;

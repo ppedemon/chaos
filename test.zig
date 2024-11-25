@@ -49,21 +49,30 @@ fn append(n: *Buf) void {
 }
 
 pub fn main() void {
-    var n = Buf{.n = 1};
-    append(&n);
+    // var n = Buf{.n = 1};
+    // append(&n);
 
-    var u = Buf{.n = 2};
-    append(&u);
+    // var u = Buf{.n = 2};
+    // append(&u);
 
-    var v = Buf{.n = 3};
-    append(&v);
+    // var v = Buf{.n = 3};
+    // append(&v);
 
-    var p = head;
-    while (p != null) : (p = p.?.next) {
-        std.debug.print("Node: {d}\n", .{p.?.n});
-    }
+    // var p = head;
+    // while (p != null) : (p = p.?.next) {
+    //     std.debug.print("Node: {d}\n", .{p.?.n});
+    // }
 
     // init();
     // scrollup();
     // show();
+
+    var dst: [15:0]u8 = undefined;
+    string.safecpy(&dst, "initcode");
+    const n = string.safeslice(&dst);
+    std.debug.print("Scanned = {s}\n", .{n});
+    for (dst, 0..) |c, i| {
+        std.debug.print("dst[{d}] = {d}\n", .{i, c});
+    }
+    std.debug.print("dst[15] = {d}\n", .{dst[15]});
 }

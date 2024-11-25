@@ -1,11 +1,12 @@
 const kalloc = @import("kalloc.zig");
-const mmu = @import("mmu.zig");
 const file = @import("file.zig");
 const lapic = @import("lapic.zig");
+const mmu = @import("mmu.zig");
 const mp = @import("mp.zig");
 const param = @import("param.zig");
 const spinlock = @import("spinlock.zig");
 const string = @import("string.zig");
+const vm = @import("vm.zig");
 const x86 = @import("x86.zig");
 
 pub const CPU = extern struct {
@@ -54,7 +55,9 @@ pub const Proc = struct {
 
 extern fn trapret() void;
 
-pub const initcode: []const u8 = @embedFile("initcode.bin");
+const initcode: []const u8 = @embedFile("initcode.bin");
+var initproc: *Proc = undefined;
+
 
 var ptable = struct {
     lock: spinlock.SpinLock,
@@ -148,7 +151,28 @@ pub fn allocproc() ?*Proc {
 }
 
 pub fn userinit() void {
-    //const p = allocproc() orelse std.buil
+    const p = allocproc() orelse unreachable;
+    initproc = p;
+
+    p.pgdir = vm.setupkvm() orelse @panic("userinit: out of memory");
+    vm.inituvm(p.pgdir, initcode);
+    p.sz = mmu.PGSIZE;
+    string.memset(@intFromPtr(p.tf), 0, @sizeOf(x86.TrapFrame));
+    p.tf.cs = (mmu.SEG_UCODE << 3) | mmu.DPL_USER;
+    p.tf.ds = (mmu.SEG_UDATA << 3) | mmu.DPL_USER;
+    p.tf.es = p.tf.ds;
+    p.tf.ss = p.tf.ds;
+    p.tf.eflags = mmu.FL_IF;
+    p.tf.esp = mmu.PGSIZE;
+    p.tf.eip = 0; // start of init/initcode.S
+    string.safecpy(&p.name, "initcode");
+    
+    // TODO implment
+    // p.cwd = namei("/");
+
+    ptable.lock.acquire();
+    p.state = ProcState.RUNNABLE;
+    ptable.lock.release();
 }
 
 fn forkret() void {

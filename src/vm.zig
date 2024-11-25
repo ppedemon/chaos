@@ -108,7 +108,7 @@ fn mappages(pgdir: [*]mmu.PdEntry, va: usize, size: usize, pa: usize, perm: usiz
     return true;
 }
 
-fn setupkvm() ?[*]mmu.PdEntry {
+pub fn setupkvm() ?[*]mmu.PdEntry {
     if (memlayout.PHYSTOP > memlayout.DEVSPACE) {
         @panic("PHYSTOP too high");
     }

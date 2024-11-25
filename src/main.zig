@@ -50,6 +50,7 @@ export fn main() align(16) noreturn {
     trap.tvinit();
     trap.idtinit();
     kalloc.kinit2(memlayout.p2v(4 * 1024 * 1024), memlayout.p2v(memlayout.PHYSTOP));
+    proc.userinit();
 
     var len: usize = 0;
     var p = kalloc.kmem.freelist;
@@ -70,13 +71,13 @@ export fn main() align(16) noreturn {
     console.cprintf("GDT addr = 0x{x}\n", .{@intFromPtr(&cpu.gdt)});
     console.cprintf("GDT size = {d}\n", .{@sizeOf(@TypeOf(cpu.gdt))});
 
-    const popt = proc.allocproc();
-    if (popt) |pr| {
-        console.cprintf("Jumping to: 0x{x}\n", .{pr.context.eip});
-        const kp = @as([*]const usize, @ptrFromInt(pr.kstack));
-        const ret = kp[(4096 - @sizeOf(x86.TrapFrame)) / @sizeOf(usize) - 1];
-        console.cprintf("Returning to: 0x{x}\n", .{ret});
-    }
+    // const popt = proc.allocproc();
+    // if (popt) |pr| {
+    //     console.cprintf("Jumping to: 0x{x}\n", .{pr.context.eip});
+    //     const kp = @as([*]const usize, @ptrFromInt(pr.kstack));
+    //     const ret = kp[(4096 - @sizeOf(x86.TrapFrame)) / @sizeOf(usize) - 1];
+    //     console.cprintf("Returning to: 0x{x}\n", .{ret});
+    // }
 
     x86.sti();
 
@@ -84,14 +85,14 @@ export fn main() align(16) noreturn {
     // for (0..1_000_000) |_| {}
     // _ = fs.ialloc(0, 1);
 
-    for (proc.initcode, 0..) |c, i| {
-        console.cprintf("{x:0>2} ", .{c});
-        if ((i + 1) % 16 == 0) {
-            console.cprintf("\n", .{});
-        } else if ((i+1) % 8 == 0) {
-            console.cprintf("    ", .{});
-        }
-    }
+    // for (proc.initcode, 0..) |c, i| {
+    //     console.cprintf("{x:0>2} ", .{c});
+    //     if ((i + 1) % 16 == 0) {
+    //         console.cprintf("\n", .{});
+    //     } else if ((i+1) % 8 == 0) {
+    //         console.cprintf("    ", .{});
+    //     }
+    // }
 
     while (true) {}
 }
