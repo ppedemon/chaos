@@ -45,12 +45,12 @@ export fn main() align(16) noreturn {
     ioapic.ioapicinit();
     console.consoleinit();
     uart.uartinit();
+    trap.tvinit();
     bio.binit();
     ide.ideinit();
-    trap.tvinit();
-    trap.idtinit();
     kalloc.kinit2(memlayout.p2v(4 * 1024 * 1024), memlayout.p2v(memlayout.PHYSTOP));
     proc.userinit();
+    mpmain();
 
     var len: usize = 0;
     var p = kalloc.kmem.freelist;
@@ -61,7 +61,6 @@ export fn main() align(16) noreturn {
 
     const cpu = proc.mycpu();
 
-    console.consclear();
     console.cprintf("Chaos started!\n", .{});
     console.cprintf("Kernel end addr = 0x{x}\n", .{end_addr});
     console.cprintf("Free pages = {d}\n", .{len});
@@ -95,6 +94,14 @@ export fn main() align(16) noreturn {
     // }
 
     while (true) {}
+}
+
+fn mpmain() void {
+    console.consclear();
+    console.cprintf("cpu #{d}: starting\n", .{proc.cpuid()});
+    trap.idtinit();
+    @atomicStore(bool, &proc.mycpu().started, true, builtin.AtomicOrder.seq_cst);
+    // TODO Scheduler
 }
 
 export const entrypgdir: [mmu.NPDENTRIES]u32 align(mmu.PGSIZE) = init: {

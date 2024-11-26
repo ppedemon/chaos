@@ -1276,6 +1276,7 @@ vector255:
 # vector table
 .data
 .globl vectors
+.align 4
 vectors:
   .long vector0
   .long vector1

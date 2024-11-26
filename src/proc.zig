@@ -1,3 +1,4 @@
+const console = @import("console.zig");
 const kalloc = @import("kalloc.zig");
 const file = @import("file.zig");
 const lapic = @import("lapic.zig");
@@ -8,6 +9,8 @@ const spinlock = @import("spinlock.zig");
 const string = @import("string.zig");
 const vm = @import("vm.zig");
 const x86 = @import("x86.zig");
+
+const uart = @import("uart.zig");
 
 pub const CPU = extern struct {
     apicid: u16,
@@ -229,4 +232,8 @@ pub fn wakeup(chan: usize) void {
     ptable.lock.acquire();
     defer ptable.lock.release();
     wakeup1(chan);
+}
+
+pub fn procdump() void {
+    console.cputs("proc dump!\n");
 }

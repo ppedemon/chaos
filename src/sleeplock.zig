@@ -25,8 +25,6 @@ pub const SleepLock = struct {
       proc.sleep(@intFromPtr(self), &self.lk);
     }
     self.locked = true;
-    
-    // TODO Enable back after testing
     self.pid = proc.myproc().?.pid;
   }
 

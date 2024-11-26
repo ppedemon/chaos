@@ -38,6 +38,12 @@ pub fn consclear() void {
     x86.out(CRTPORT + 1, @as(u8, 0));
 }
 
+pub fn cputs(msg: []const u8) void {
+    for (msg) |c| {
+        consputc(c);
+    }
+}
+
 pub fn cprintf(comptime format: []const u8, args: anytype) void {
     if (cons.locking) {
         cons.lock.acquire();
@@ -48,19 +54,14 @@ pub fn cprintf(comptime format: []const u8, args: anytype) void {
     var fba = std.heap.FixedBufferAllocator.init(buf[0..]);
     const allocator = fba.allocator();
     const s = fmt.allocPrint(allocator, format, args) catch "error";
-
-    for(s) |c| {
-        consputc(c);
-    }
+    cputs(s);
 }
 
 pub fn panic(msg: []const u8) noreturn {
     // If CPUs not inititialized yet, it's too early for a proper panic.
     // Just emit to console the given message and spin.
     if (mp.ncpu == 0) {
-        for (msg) |c| {
-            consputc(c);
-        }
+        cputs(msg);
         while (true) {}
     }
 
@@ -202,14 +203,13 @@ pub fn consolewrite(ip: *file.Inode, buf: []const u8, n: u32) u32 {
 }
 
 pub fn consoleintr(getc: *const fn() ?u8) void {
-    var doprocdump = false;
+    var procdump = false;
 
     cons.lock.acquire();
     defer {
         cons.lock.release();
-        if (doprocdump) {
-            // TODO Actual procdump
-            puts("proc dump!\n");
+        if (procdump) {
+            proc.procdump();
         }
     }
 
@@ -217,7 +217,7 @@ pub fn consoleintr(getc: *const fn() ?u8) void {
         var c = getc() orelse break;
         switch (c) {
             ctrl('P') => {
-                doprocdump = true;
+                procdump = true;
             },
             ctrl('U') => {
                 while (input.e != input.w and input.buf[input.e -% 1] != '\n') {
@@ -257,91 +257,92 @@ pub fn consoleinit() void {
 // -----------------------------------------------------------------------
 // Legacy form now on, eventually deprecate
 // -----------------------------------------------------------------------
-const VGA_WIDTH = 80;
-const VGA_HEIGHT = 25;
-const VGA_SIZE = VGA_HEIGHT * VGA_WIDTH;
+// const VGA_WIDTH = 80;
+// const VGA_HEIGHT = 25;
+// const VGA_SIZE = VGA_HEIGHT * VGA_WIDTH;
 
-pub const Colors = enum(u8) {
-    Black = 0,
-    Blue = 1,
-    Green = 2,
-    Cyan = 3,
-    Red = 4,
-    Magenta = 5,
-    Brown = 6,
-    LightGray = 7,
-    DarkGray = 8,
-    LightBlue = 9,
-    LightGreen = 10,
-    LightCyan = 11,
-    LightRed = 12,
-    LightMagenta = 13,
-    LightBrown = 14,
-    White = 15,
-};
+// pub const Colors = enum(u8) {
+//     Black = 0,
+//     Blue = 1,
+//     Green = 2,
+//     Cyan = 3,
+//     Red = 4,
+//     Magenta = 5,
+//     Brown = 6,
+//     LightGray = 7,
+//     DarkGray = 8,
+//     LightBlue = 9,
+//     LightGreen = 10,
+//     LightCyan = 11,
+//     LightRed = 12,
+//     LightMagenta = 13,
+//     LightBrown = 14,
+//     White = 15,
+// };
 
-var row: usize = 0;
-var col: usize = 0;
-var color = vgaentrycolor(Colors.LightGray, Colors.Black);
-var buffer = @as([*]volatile u16, @ptrFromInt(memlayout.p2v(0xB8000)));
+// var row: usize = 0;
+// var col: usize = 0;
+// var color: u8 = 0; //vgaentrycolor(Colors.LightGray, Colors.Black);
+// var buffer = @as([*]volatile u16, @ptrFromInt(memlayout.p2v(0xB8000)));
+// var buffer: usize = undefined;
 
-fn vgaentrycolor(fg: Colors, bg: Colors) u8 {
-    return @intFromEnum(fg) | (@intFromEnum(bg) << 4);
-}
+// fn vgaentrycolor(fg: Colors, bg: Colors) u8 {
+//     return @intFromEnum(fg) | (@intFromEnum(bg) << 4);
+// }
 
-fn vgaentry(c: u8, new_color: u8) u16 {
-    return c | (@as(u16, new_color) << 8);
-}
+// fn vgaentry(_: u8, _: u8) u16 {
+//     return 0; //return c | (@as(u16, new_color) << 8);
+// }
 
-pub fn setcolors(fg: Colors, bg: Colors) void {
-    color = vgaentrycolor(fg, bg);
-}
+// pub fn setcolors(fg: Colors, bg: Colors) void {
+//     color = vgaentrycolor(fg, bg);
+// }
 
-pub fn setfgcolor(fg: Colors) void {
-    color = (0xF0 & color) | @intFromEnum(fg);
-}
+// pub fn setfgcolor(fg: Colors) void {
+//     color = (0xF0 & color) | @intFromEnum(fg);
+// }
 
-pub fn setbgcolor(bg: Colors) void {
-    color = (0x0F & color) | (@intFromEnum(bg) << 4);
-}
+// pub fn setbgcolor(bg: Colors) void {
+//     color = (0x0F & color) | (@intFromEnum(bg) << 4);
+// }
 
-pub fn clear() void {
-    @memset(buffer[0..VGA_SIZE], vgaentry(' ', color));
-}
+// pub fn clear() void {
+//     @memset(buffer[0..VGA_SIZE], vgaentry(' ', color));
+// }
 
-pub fn putchar_at(c: u8, new_color: u8, x: usize, y: usize) void {
-    const index = y * VGA_WIDTH + x;
-    buffer[index] = vgaentry(c, new_color);
-}
+// pub fn putchar_at(_: u8, _: u8, _: usize, _: usize) void {
+//     const index = y * VGA_WIDTH + x;
+//     buffer = 0; //vgaentry(c, new_color);
+// }
 
-pub fn putchar(c: u8) void {
-    switch (c) {
-        '\r' => col = 0,
-        '\n' => {
-            col = 0;
-            row = (row + 1) % VGA_HEIGHT;
-        },
-        else => {
-            putchar_at(c, color, col, row);
-            col += 1;
-            if (col == VGA_WIDTH) {
-                col = 0;
-                row = (row + 1) % VGA_HEIGHT;
-            }
-        },
-    }
-}
+// pub fn putchar(c: u8) void {
+//     switch (c) {
+//         '\r' => col = 0,
+//         '\n' => {
+//             col = 0;
+//             row = (row + 1) % VGA_HEIGHT;
+//         },
+//         else => {
+//             putchar_at(c, color, col, row);
+//             col += 1;
+//             if (col == VGA_WIDTH) {
+//                 col = 0;
+//                 row = (row + 1) % VGA_HEIGHT;
+//             }
+//         },
+//     }
+// }
 
-pub fn puts(data: []const u8) void {
-    for (data) |c| {
-        putchar(c);
-    }
-}
+// pub fn puts(data: []const u8) void {
+//     for (data) |c| {
+//         putchar(c);
+//     }
+// }
 
-pub fn printf(comptime format: []const u8, args: anytype) void {
-    var buf: [1024]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(buf[0..]);
-    const allocator = fba.allocator();
-    const s = fmt.allocPrint(allocator, format, args) catch "error";
-    puts(s);
-}
+// pub fn printf(comptime format: []const u8, args: anytype) void {
+//     var buf: [1024]u8 = undefined;
+//     var fba = std.heap.FixedBufferAllocator.init(buf[0..]);
+//     const allocator = fba.allocator();
+//     const s = fmt.allocPrint(allocator, format, args) catch "error";
+//     puts(s);
+// }
