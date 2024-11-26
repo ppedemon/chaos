@@ -43,7 +43,7 @@ fn idewait(checkerr: bool) ?void {
 }
 
 pub fn ideinit() void {
-    // TODO Assign IQR_IDE to last CPU whan we activte all of them. For now, direct to to CPU #0 as the rest.
+    // TODO Assign IQR_IDE to last CPU when we activte all of them. For now, direct to to CPU #0 as the rest.
     //ioapic.ioapicenable(trap.IRQ_IDE, mp.ncpu);
     ioapic.ioapicenable(trap.IRQ_IDE, 0);
 
@@ -157,8 +157,7 @@ pub fn iderw(b: *bio.Buf) void {
         idestart(idequeue.?);
     }
 
-    // TODO Enable back after testing
-    // while ((b.flags) & (bio.B_VALID | bio.B_DIRTY) != bio.B_VALID) {
-    //     proc.sleep(@intFromPtr(b), &idelock);
-    // }
+    while ((b.flags) & (bio.B_VALID | bio.B_DIRTY) != bio.B_VALID) {
+        proc.sleep(@intFromPtr(b), &idelock);
+    }
 }
