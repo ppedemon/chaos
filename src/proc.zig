@@ -23,7 +23,7 @@ pub const CPU = extern struct {
     proc: ?*Proc,
 };
 
-pub const ProcState = enum {
+pub const ProcState = enum(u8) {
     UNUSED,
     EMBRYO,
     SLEEPING,
@@ -296,6 +296,34 @@ pub fn wakeup(chan: usize) void {
 }
 
 pub fn procdump() void {
-    // TODO implement
-    console.cputs("proc dump!\n");
+    for (&ptable.proc) |*p| {
+        if (p.state == ProcState.UNUSED) {
+            continue;
+        }
+        const state = @tagName(p.state);
+        console.cprintf("{d} {s} {s}", .{ p.pid, state, p.name });
+        if (p.state == ProcState.SLEEPING or true) {
+            var pcs: [10]usize = [1]usize{0} ** 10;
+            procpcs(p, &pcs);
+            var i: usize = 0;
+            while (i < pcs.len and pcs[i] != 0) : (i += 1) {
+                console.cprintf(" {x}", .{pcs[i]});
+            }
+        }
+        console.cputs("\n");
+    }
+}
+
+fn procpcs(proc: *Proc, pcs: []usize) void {
+    const ebp_ptr: *usize = @ptrFromInt(@intFromPtr(&proc.context.ebp) + 2 * @sizeOf(usize));
+    var ebp = ebp_ptr.*;
+    var i: usize = 0;
+    while (ebp != 0 and ebp != 0xFFFF_FFFF and ebp >= memlayout.KERNBASE and i < pcs.len) : (i += 1) {
+        const p: [*]const usize = @ptrFromInt(ebp);
+        ebp = p[0];
+        pcs[i] = p[1];
+    }
+    while (i < pcs.len) : (i += 1) {
+        pcs[i] = 0;
+    }
 }

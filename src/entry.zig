@@ -30,7 +30,7 @@ comptime {
     );
 }
 
-export fn start() align(16) callconv(.Naked) noreturn {
+export fn start() callconv(.Naked) noreturn {
     asm volatile (
         \\ movl %cr4, %eax
         \\ orl %[flags], %eax
@@ -49,7 +49,6 @@ export fn start() align(16) callconv(.Naked) noreturn {
         :
         : [flags] "{ecx}" (mmu.CR0_PG | mmu.CR0_WP),
     );
-
     asm volatile (
         \\ movl $stack, %eax
         \\ addl %[sz], %eax
