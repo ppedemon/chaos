@@ -196,5 +196,5 @@ pub fn inituvm(pgdir: [*]mmu.PdEntry, src: []const u8) void {
     if (!succ) {
         @panic("inituvm: no free pages");
     }
-    @memcpy(@as([*]u8, @ptrFromInt(mem)), src);
+    string.memmove(mem, @intFromPtr(&src[0]), src.len);
 }

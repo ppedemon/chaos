@@ -65,7 +65,7 @@ pub var superblock: SuperBlock = undefined;
 pub fn readsb(dev: u32, sb: *SuperBlock) void {
     const b = bio.Buf.read(dev, 1);
     defer b.release();
-    string.memmove(@intFromPtr(sb), @intFromPtr(&b.data), @sizeOf(SuperBlock));
+    string.memmove(@intFromPtr(sb), @intFromPtr(&b.data[0]), @sizeOf(SuperBlock));
 }
 
 fn bzero(dev: u32, blockno: u32) void {
