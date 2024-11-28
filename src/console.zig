@@ -60,13 +60,13 @@ pub fn cprintf(comptime format: []const u8, args: anytype) void {
 pub fn panic(msg: []const u8) noreturn {
     // If CPUs not inititialized yet, it's too early for a proper panic.
     // Just emit to console the given message and spin.
-    if (mp.ncpu == 0) {
+    if (mp.ncpu == 0 or true) {
         cputs(msg);
         while (true) {}
     }
 
     x86.cli();
-    cons.locking = true;
+    cons.locking = false; //true;
 
     cprintf("lapic id {d} panic: ", .{lapic.lapicid()});
     cprintf("{s}", .{msg});
@@ -202,7 +202,7 @@ pub fn consolewrite(ip: *file.Inode, buf: []const u8, n: u32) u32 {
     return n;
 }
 
-pub fn consoleintr(getc: *const fn() ?u8) void {
+pub fn consoleintr(getc: *const fn () ?u8) void {
     var procdump = false;
 
     cons.lock.acquire();

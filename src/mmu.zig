@@ -63,6 +63,24 @@ pub const SegDesc = packed struct {
             .base31_24 = @intCast((base >> 24) & 0xFF),
         };
     }
+
+    pub fn new16(ty: u4, base: u32, lim: u32, dpl: u2) Self {
+        return .{
+            .lim15_0 = @intCast((lim & 0xFFFF) & 0xFFFF),
+            .base15_0 = @intCast(base & 0xFFFF),
+            .base23_16 = @intCast((base >> 16) & 0xFF),
+            .ty = ty,
+            .s = 1,
+            .dpl = dpl,
+            .p = 1,
+            .lim19_16 = @intCast((lim >> 16) & 0x0F),
+            .avl = 0,
+            .rsv1 = 0,
+            .db = 1,
+            .g = 0,
+            .base31_24 = @intCast((base >> 24) & 0xFF),
+        };
+    }
 };
 
 // Same as above: size here is 64 bits, multiple of 8 as well. So
@@ -134,10 +152,45 @@ pub fn pteflags(pte: usize) usize {
     return pte & @as(usize, 0xFFF);
 }
 
+// Data held by a Task State Segment, all unused except:
+//  - ss0:esp0, pointing to current process kstack
+//  - I/O map base address, which we disable
 pub const TaskState = extern struct {
     link: u32, // Prev task state selector
     esp0: u32, // Stack pointer after increase in privilege level
     ss0: u16, // Stack segment descriptor after increase in privilege level
+    padding0: u16,
+    esp1: u32,
+    ss1: u16,
     padding1: u16,
-    // TODO Complete me!
+    esp2: u32,
+    ss2: u16,
+    padding2: u16,
+    cr3: u32,
+    eip: u32,
+    eflags: u32,
+    eax: u32,
+    ecx: u32,
+    edx: u32,
+    ebx: u32,
+    esp: u32,
+    ebp: u32,
+    esi: u32,
+    edi: u32,
+    es: u16,
+    padding3: u16,
+    cs: u16,
+    padding4: u16,
+    ss: u16,
+    padding5: u16,
+    ds: u16,
+    padding6: u16,
+    fs: u16,
+    padding7: u16,
+    gs: u16,
+    padding8: u16,
+    ldtr: u16,
+    padding9: u16,
+    t: u16,
+    iomb: u16
 };

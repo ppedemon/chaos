@@ -51,24 +51,25 @@ export fn main() align(16) noreturn {
     kalloc.kinit2(memlayout.p2v(4 * 1024 * 1024), memlayout.p2v(memlayout.PHYSTOP));
     proc.userinit();
     mpmain();
+    unreachable;
 
-    var len: usize = 0;
-    var p = kalloc.kmem.freelist;
-    while (p) |curr| {
-        len += 1;
-        p = curr.next;
-    }
+    // var len: usize = 0;
+    // var p = kalloc.kmem.freelist;
+    // while (p) |curr| {
+    //     len += 1;
+    //     p = curr.next;
+    // }
 
-    const cpu = proc.mycpu();
+    // const cpu = proc.mycpu();
 
-    console.cprintf("Chaos started!\n", .{});
-    console.cprintf("Kernel end addr = 0x{x}\n", .{end_addr});
-    console.cprintf("Free pages = {d}\n", .{len});
-    console.cprintf("# of CPUs = {d}\n", .{mp.ncpu});
-    console.cprintf("LAPIC addr = 0x{x}\n", .{@intFromPtr(lapic.lapic)});
-    console.cprintf("Current CPU id = {d}\n", .{cpu.apicid});
-    console.cprintf("GDT addr = 0x{x}\n", .{@intFromPtr(&cpu.gdt)});
-    console.cprintf("GDT size = {d}\n", .{@sizeOf(@TypeOf(cpu.gdt))});
+    // console.cprintf("Chaos started!\n", .{});
+    // console.cprintf("Kernel end addr = 0x{x}\n", .{end_addr});
+    // console.cprintf("Free pages = {d}\n", .{len});
+    // console.cprintf("# of CPUs = {d}\n", .{mp.ncpu});
+    // console.cprintf("LAPIC addr = 0x{x}\n", .{@intFromPtr(lapic.lapic)});
+    // console.cprintf("Current CPU id = {d}\n", .{cpu.apicid});
+    // console.cprintf("GDT addr = 0x{x}\n", .{@intFromPtr(&cpu.gdt)});
+    // console.cprintf("GDT size = {d}\n", .{@sizeOf(@TypeOf(cpu.gdt))});
 
     // const popt = proc.allocproc();
     // if (popt) |pr| {
@@ -78,7 +79,7 @@ export fn main() align(16) noreturn {
     //     console.cprintf("Returning to: 0x{x}\n", .{ret});
     // }
 
-    x86.sti();
+    //x86.sti();
 
     // fs.readsb(0, &fs.superblock);
     // for (0..1_000_000) |_| {}
@@ -93,7 +94,7 @@ export fn main() align(16) noreturn {
     //     }
     // }
 
-    while (true) {}
+    //while (true) {}
 }
 
 fn mpmain() void {
@@ -101,7 +102,7 @@ fn mpmain() void {
     console.cprintf("cpu #{d}: starting\n", .{proc.cpuid()});
     trap.idtinit();
     @atomicStore(bool, &proc.mycpu().started, true, builtin.AtomicOrder.seq_cst);
-    // TODO Scheduler
+    proc.scheduler();
 }
 
 export const entrypgdir: [mmu.NPDENTRIES]u32 align(mmu.PGSIZE) = init: {

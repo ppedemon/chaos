@@ -1,3 +1,4 @@
+const console = @import("console.zig");
 const ide = @import("ide.zig");
 const kbd = @import("kbd.zig");
 const mmu = @import("mmu.zig");
@@ -65,36 +66,50 @@ pub fn tvinit() void {
 }
 
 pub fn idtinit() void {
-  x86.lidt(@intFromPtr(&idt), @sizeOf(@TypeOf(idt)));
+    x86.lidt(@intFromPtr(&idt), @sizeOf(@TypeOf(idt)));
 }
 
-export fn trap(tf: *x86.TrapFrame) void {
-  if (tf.trapno == T_SYSCALL) {
-    // TODO sys calls
-  }
+var times: usize = 0;
 
-  switch (tf.trapno) {
-    T_IRQ0 + IRQ_TIMER => {
-      tickslock.acquire();
-      ticks +%= 1;
-      proc.wakeup(@intFromPtr(&ticks));
-      tickslock.release();
-      lapic.lapiceoi();
-    },
-    T_IRQ0 + IRQ_KBD => {
-      kbd.kbdintr();
-      lapic.lapiceoi();
-    },
-    T_IRQ0 + IRQ_COM1 => {
-      uart.uartintr();
-      lapic.lapiceoi();
-    },
-    T_IRQ0 + IRQ_IDE => {
-      ide.ideintr();
-      lapic.lapiceoi();
-    },
-    else => {
-      @panic("Unhandled Exception");
-    },
-  }
+export fn trap(tf: *x86.TrapFrame) callconv(.C) void {
+    if (tf.trapno == T_SYSCALL) {
+        // TODO sys calls
+        times +%= 1;
+        if (times % 1_000_000 == 0) {
+            console.cputs("This should be exec, called form init code\n");
+        }
+        return;
+    }
+
+    switch (tf.trapno) {
+        T_IRQ0 + IRQ_TIMER => {
+            tickslock.acquire();
+            ticks +%= 1;
+            proc.wakeup(@intFromPtr(&ticks));
+            tickslock.release();
+            lapic.lapiceoi();
+        },
+        T_IRQ0 + IRQ_KBD => {
+            kbd.kbdintr();
+            lapic.lapiceoi();
+        },
+        T_IRQ0 + IRQ_COM1 => {
+            uart.uartintr();
+            lapic.lapiceoi();
+        },
+        T_IRQ0 + IRQ_IDE => {
+            ide.ideintr();
+            lapic.lapiceoi();
+        },
+        else => {
+            console.cprintf(">>> Trapno = {d}\n", .{tf.trapno});
+            @panic("Unhandled Exception");
+        },
+    }
+
+    if (proc.myproc()) |p| {
+        if (p.state == proc.ProcState.RUNNING) {
+            proc.yield();
+        }
+    }
 }

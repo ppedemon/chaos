@@ -4,8 +4,6 @@ const proc = @import("proc.zig");
 const string = @import("string.zig");
 const x86 = @import("x86.zig");
 
-extern fn __atomic_thread_fence(order: u32) void;
-
 pub const SpinLock = struct {
     locked: u32,
     name: []const u8,
@@ -88,18 +86,24 @@ pub fn popcli() void {
 }
 
 pub fn getpcs(pcs: []usize) void {
-    var ebp: usize = asm volatile ("mov (%ebp), %eax"
+    var ebp: usize = asm volatile ("mov %ebp, %eax"
         : [result] "={eax}" (-> u32),
     );
 
+    var first = true;
     var i: usize = 0;
 
     // 0xFFFF_FFFF is a sentinel ebp value denoting the bottom of the kernel stack.
     // See start() in entry.zig
-    while (ebp != 0xFFFF_FFFF and i < pcs.len) : (i += 1) {
+    while (ebp != 0 and ebp != 0xFFFF_FFFF and i < pcs.len) : (i += 1) {
         const p: [*]const usize = @ptrFromInt(ebp);
-        pcs[i] = p[1];
         ebp = p[0];
+        // No point in storing getpcs %ebp
+        if (first) {
+            first = false;
+        } else {
+            pcs[i] = p[1];
+        }
     }
     while (i < pcs.len) : (i += 1) {
         pcs[i] = 0;

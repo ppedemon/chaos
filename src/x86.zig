@@ -126,6 +126,14 @@ pub inline fn lidt(p: usize, size: u16) void {
     );
 }
 
+pub inline fn ltr(tsel: u16) void {
+    asm volatile (
+        \\ ltr %[tsel]
+        :
+        : [tsel] "{eax}" (tsel)
+    );
+}
+
 pub inline fn lcr3(addr: usize) void {
     asm volatile (
         \\ mov %[addr], %cr3

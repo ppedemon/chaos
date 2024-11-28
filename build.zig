@@ -53,6 +53,7 @@ pub fn build(b: *std.Build) void {
     kernel.addObject(main);
     kernel.addAssemblyFile(b.path("src/trap.S"));
     kernel.addAssemblyFile(b.path("src/vector.S"));
+    kernel.addAssemblyFile(b.path("src/swtch.S"));
     kernel.setLinkerScriptPath(b.path("kernel.ld"));
     kernel.step.dependOn(&initCodeInstall.step);
 

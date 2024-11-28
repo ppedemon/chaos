@@ -10,11 +10,11 @@ const string = @import("string.zig");
 const vm = @import("vm.zig");
 const x86 = @import("x86.zig");
 
-const uart = @import("uart.zig");
+const memlayout = @import("memlayout.zig");
 
 pub const CPU = extern struct {
     apicid: u16,
-    scheduler: ?*Context,
+    scheduler: *Context,
     ts: mmu.TaskState,
     gdt: [mmu.NSEGS]mmu.SegDesc,
     started: bool,
@@ -56,11 +56,11 @@ pub const Proc = struct {
     name: [15:0]u8,
 };
 
-extern fn trapret() void;
+extern fn trapret() callconv(.C) void;
+extern fn swtch(old: **Context, new: *Context) callconv(.C) void;
 
 const initcode: []const u8 = @embedFile("initcode.bin");
 var initproc: *Proc = undefined;
-
 
 var ptable = struct {
     lock: spinlock.SpinLock,
@@ -109,8 +109,8 @@ pub fn myproc() ?*Proc {
 //
 // We are done. The context switching code will set the stack pointer one past the Context.
 // That is, pointing at the trapret return address. This is where forkret will return.
-// Then, trapret restores user registers and enters the new process.
-// 
+// Then, trapret restores user registers and returns from the original interruption.
+//
 pub fn allocproc() ?*Proc {
     ptable.lock.acquire();
 
@@ -134,10 +134,11 @@ pub fn allocproc() ?*Proc {
             sp -= @sizeOf(x86.TrapFrame);
             p.tf = @ptrFromInt(sp);
 
-            // Set ret address = trapframe
+            // Set ret address = trapret
             sp -= 4;
             const ret_ptr = @as(*usize, @ptrFromInt(sp));
             ret_ptr.* = @intFromPtr(&trapret);
+            //console.cprintf("trapret at 0x{x}\n", .{sp});
 
             // Put a context with eip pointing to forkret
             sp -= @sizeOf(Context);
@@ -168,13 +169,74 @@ pub fn userinit() void {
     p.tf.eflags = mmu.FL_IF;
     p.tf.esp = mmu.PGSIZE;
     p.tf.eip = 0; // start of init/initcode.S
+
     string.safecpy(&p.name, "initcode");
-    
+
     // TODO implment
     // p.cwd = namei("/");
 
     ptable.lock.acquire();
     p.state = ProcState.RUNNABLE;
+    ptable.lock.release();
+}
+
+pub fn scheduler() void {
+    const cpu: *CPU = mycpu();
+    cpu.proc = null;
+
+    while (true) {
+        // If there are any pending interrupts, handle them
+        x86.sti();
+
+        // Now disable them again and lock the ptable so we can safely operate on process scheduling
+        ptable.lock.acquire();
+        for (&ptable.proc) |*p| {
+            if (p.state != ProcState.RUNNABLE) {
+                continue;
+            }
+
+            cpu.proc = p;
+            vm.switchuvm(p); // Interrupts from now on will use p.kstack
+            p.state = ProcState.RUNNING;
+
+            // After this call, we will executing process p, which must
+            //  - release the ptable lock before starting execution
+            //  - re-acquire the ptable lock and update state before yielding back to the scheduler
+            swtch(&cpu.scheduler, p.context);
+
+            // p yielded back the the scheduler
+            vm.switchkvm(); // Start using kernel's memory pages
+            cpu.proc = null; // We are no longer running a process
+        }
+        ptable.lock.release();
+    }
+}
+
+fn sched() void {
+    const cpu = mycpu();
+    const p = myproc() orelse unreachable;
+
+    if (!ptable.lock.holding()) {
+        @panic("sched: not holding table lock");
+    }
+    if (cpu.ncli != 1) {
+        @panic("sched: locks");
+    }
+    if (p.state == ProcState.RUNNING) {
+        @panic("sched: current process still running");
+    }
+    if (x86.readeflags() & mmu.FL_IF != 0) {
+        @panic("sched: interruptible");
+    }
+    const intena = cpu.intena;
+    swtch(&p.context, cpu.scheduler);
+    mycpu().intena = intena;
+}
+
+pub fn yield() void {
+    ptable.lock.acquire();
+    myproc().?.state = ProcState.RUNNABLE;
+    sched();
     ptable.lock.release();
 }
 
@@ -235,5 +297,6 @@ pub fn wakeup(chan: usize) void {
 }
 
 pub fn procdump() void {
+    // TODO implement
     console.cputs("proc dump!\n");
 }
