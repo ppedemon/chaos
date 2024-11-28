@@ -138,7 +138,6 @@ pub fn allocproc() ?*Proc {
             sp -= 4;
             const ret_ptr = @as(*usize, @ptrFromInt(sp));
             ret_ptr.* = @intFromPtr(&trapret);
-            //console.cprintf("trapret at 0x{x}\n", .{sp});
 
             // Put a context with eip pointing to forkret
             sp -= @sizeOf(Context);
@@ -199,8 +198,8 @@ pub fn scheduler() void {
             vm.switchuvm(p); // Interrupts from now on will use p.kstack
             p.state = ProcState.RUNNING;
 
-            // After this call, we will executing process p, which must
-            //  - release the ptable lock before starting execution
+            // After this call, we will start executing process p, which must:
+            //  - release the ptable lock before starting execution (forkret does this)
             //  - re-acquire the ptable lock and update state before yielding back to the scheduler
             swtch(&cpu.scheduler, p.context);
 
