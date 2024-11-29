@@ -271,7 +271,7 @@ pub fn sleep(chan: usize, lock: *spinlock.SpinLock) void {
     p.chan = chan;
     p.state = ProcState.SLEEPING;
 
-    // TODO enter scheduler
+    sched();
 
     p.chan = 0;
     if (lock != &ptable.lock) {
@@ -281,8 +281,7 @@ pub fn sleep(chan: usize, lock: *spinlock.SpinLock) void {
 }
 
 pub fn wakeup1(chan: usize) void {
-    for (0..param.NPROC) |i| {
-        var p = ptable.proc[i];
+    for (&ptable.proc) |*p| {
         if (p.state == ProcState.SLEEPING and p.chan == chan) {
             p.state = ProcState.RUNNABLE;
         }
