@@ -1,5 +1,6 @@
 const bio = @import("bio.zig");
 const file = @import("file.zig");
+const log = @import("log.zig");
 const param = @import("param.zig");
 const sleeplock = @import("sleeplock.zig");
 const spinlock = @import("spinlock.zig");
@@ -72,7 +73,7 @@ fn bzero(dev: u32, blockno: u32) void {
     var b = bio.Buf.read(dev, blockno);
     defer b.release();
     @memset(&b.data, 0);
-    // TODO Write to log
+    log.log_write(b);
 }
 
 fn balloc(dev: u32) u32 {
@@ -84,7 +85,7 @@ fn balloc(dev: u32) u32 {
             const n: u8 = @as(u8, 1) << @intCast(bi % 8);
             if ((bp.data[bi / 8] & n) == 0) {
                 bp.data[bi / 8] |= n;
-                // TODO Write to log
+                log.log_write(bp);
                 bp.release();
                 bzero(dev, b + bi);
                 return b + bi;
@@ -96,6 +97,7 @@ fn balloc(dev: u32) u32 {
 }
 
 fn bfree(dev: u32, blockno: u32) void {
+    readsb(dev, &superblock);
     var bp = bio.Buf.read(dev, bblock(blockno, superblock));
     const bi = blockno % BPB;
     const n = @as(u8, 1) << @intCast(bi % 8);
@@ -103,7 +105,7 @@ fn bfree(dev: u32, blockno: u32) void {
         @panic("bfree: block not in use");
     }
     bp.data[bi / 8] &= ~n;
-    // TODO Write to log
+    log.log_write(bp);
     bp.release();
 }
 
@@ -131,11 +133,11 @@ pub fn ialloc(dev: u32, ty: u16) *file.Inode {
     while (i < superblock.ninodes) : (i += 1) {
         var b = bio.Buf.read(dev, iblock(i, superblock));
         const p: [*]DiskInode = @alignCast(@ptrCast(&b.data));
-        var din = p[i % IPB];
+        var din = &p[i % IPB];
         if (din.ty == 0) {
             string.memset(@intFromPtr(&din), 0, @sizeOf(DiskInode));
             din.ty = ty;
-            // TODO Write to log
+            log.log_write(b);
             b.release();
             // TODO return iget from here
             return &itable.inode[0];

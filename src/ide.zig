@@ -114,8 +114,6 @@ pub fn ideintr() void {
     const b = idequeue orelse return;
     idequeue = b.qnext;
 
-    b.data[1] = 0xFF;
-
     // Set current drive and wait until ready
     x86.out(0x1F6, 0xE0 | @as(u8, @intCast(b.dev & 1)) << 4);
     if (idewait(true)) |_| {

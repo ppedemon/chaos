@@ -91,12 +91,13 @@ pub fn binit() void {
 
 fn bget(dev: u32, blockno: u32) *Buf {
     bcache.lock.acquire();
-    defer bcache.lock.release();
 
     var b = bcache.head.next;
     while (b != &bcache.head) : (b = b.next) {
         if (b.dev == dev and b.blockno == blockno) {
             b.refcnt += 1;
+            bcache.lock.release();
+            b.lock.acquire();
             return b;
         }
     }
@@ -108,6 +109,7 @@ fn bget(dev: u32, blockno: u32) *Buf {
             b.blockno = blockno;
             b.flags = 0;
             b.refcnt = 1;
+            bcache.lock.release();
             b.lock.acquire();
             return b;
         }

@@ -12,6 +12,6 @@ pub const MAXOPBLOCKS = 10; // Max # of blocks that file system op writes
 pub const LOGSIZE = MAXOPBLOCKS * 3; // Max data blocks in on-disk log
 pub const NBUF = MAXOPBLOCKS * 3; // Size of disk block cache
 
-pub const ROOTDEV = 1; // Device # of file system root disk
+pub const ROOTDEV = 0; // Device # of file system root disk
 
 pub const MAXARG = 32; // max exec arguments

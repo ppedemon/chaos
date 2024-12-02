@@ -2,6 +2,7 @@ const console = @import("console.zig");
 const kalloc = @import("kalloc.zig");
 const file = @import("file.zig");
 const lapic = @import("lapic.zig");
+const log = @import("log.zig");
 const mmu = @import("mmu.zig");
 const mp = @import("mp.zig");
 const param = @import("param.zig");
@@ -171,7 +172,7 @@ pub fn userinit() void {
 
     string.safecpy(&p.name, "initcode");
 
-    // TODO implment
+    // TODO implement
     // p.cwd = namei("/");
 
     ptable.lock.acquire();
@@ -249,7 +250,8 @@ fn forkret() void {
 
     if (static.first) {
         static.first = false;
-        // TODO init inodes and log writer
+        log.init(param.ROOTDEV);
+        // TODO init inodes
     }
 
     // This returns to trapret (see allocproc)
@@ -301,7 +303,7 @@ pub fn procdump() void {
         }
         const state = @tagName(p.state);
         console.cprintf("{d} {s} {s}", .{ p.pid, state, p.name });
-        if (p.state == ProcState.SLEEPING or true) {
+        if (p.state == ProcState.SLEEPING) {
             var pcs: [10]usize = [1]usize{0} ** 10;
             procpcs(p, &pcs);
             var i: usize = 0;
