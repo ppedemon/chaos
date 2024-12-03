@@ -159,7 +159,7 @@ pub fn log_write(b: *bio.Buf) void {
     log.lock.acquire();
     defer log.lock.release();
 
-    var i = 0;
+    var i: u32 = 0;
     while (i < log.header.n) : (i += 1) {
         if (log.header.block[i] == b.blockno) {
             break;
