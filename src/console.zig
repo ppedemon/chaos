@@ -2,6 +2,7 @@ const std = @import("std");
 const fmt = @import("std").fmt;
 
 const file = @import("file.zig");
+const fs = @import("fs.zig");
 const ioapic = @import("ioapic.zig");
 const lapic = @import("lapic.zig");
 const memlayout = @import("memlayout.zig");
@@ -60,7 +61,7 @@ pub fn cprintf(comptime format: []const u8, args: anytype) void {
 pub fn panic(msg: []const u8) noreturn {
     // If CPUs not inititialized yet, it's too early for a proper panic.
     // Just emit to console the given message and spin.
-    if (mp.ncpu == 0 or true) {
+    if (mp.ncpu == 0) {
         cputs(msg);
         while (true) {}
     }
@@ -147,12 +148,12 @@ var input = struct {
     .e = 0,
 };
 
-pub fn consoleread(ip: *file.Inode, dst: [*]u8, n: u32) ?u32 {
-    ip.unlock();
+pub fn consoleread(ip: *fs.Inode, dst: []u8, n: u32) ?u32 {
+    ip.iunlock();
     cons.lock.acquire();
     defer {
         cons.lock.release();
-        ip.lock();
+        ip.ilock();
     }
 
     var read_count: u32 = 0;
@@ -187,12 +188,12 @@ pub fn consoleread(ip: *file.Inode, dst: [*]u8, n: u32) ?u32 {
     return read_count;
 }
 
-pub fn consolewrite(ip: *file.Inode, buf: []const u8, n: u32) u32 {
-    ip.unlock();
+pub fn consolewrite(ip: *fs.Inode, buf: []const u8, n: u32) ?u32 {
+    ip.iunlock();
     cons.lock.acquire();
     defer {
         cons.lock.release();
-        ip.lock();
+        ip.ilock();
     }
 
     for (0..n) |i| {

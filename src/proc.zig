@@ -1,6 +1,7 @@
 const console = @import("console.zig");
-const kalloc = @import("kalloc.zig");
 const file = @import("file.zig");
+const fs = @import("fs.zig");
+const kalloc = @import("kalloc.zig");
 const lapic = @import("lapic.zig");
 const log = @import("log.zig");
 const mmu = @import("mmu.zig");
@@ -53,7 +54,7 @@ pub const Proc = struct {
     chan: usize,
     killed: bool,
     ofile: *[param.NPROCFILE]file.File,
-    cwd: ?*file.Inode,
+    cwd: ?*fs.Inode,
     name: [15:0]u8,
 };
 
@@ -250,8 +251,12 @@ fn forkret() void {
 
     if (static.first) {
         static.first = false;
+        fs.iinit(param.ROOTDEV);
         log.init(param.ROOTDEV);
-        // TODO init inodes
+
+        // Test, remove
+        fs.Inode.itest();
+        console.cputs("Done testing\n");
     }
 
     // This returns to trapret (see allocproc)

@@ -165,14 +165,14 @@ fn wsect(sect: usize, buf: []const u8) !void {
 
 fn rinode(inum: u32) !fs.DiskInode {
     var buf: [fs.BSIZE]u8 = undefined;
-    const blocknum = fs.iblock(inum, static.sb);
+    const blocknum = fs.iblock(inum, &static.sb);
     try rsect(blocknum, &buf);
     return try rstruct(fs.DiskInode, buf[@sizeOf(fs.DiskInode) * (inum % fs.IPB) ..]);
 }
 
 fn winode(inum: u32, ip: *fs.DiskInode) !void {
     var buf: [fs.BSIZE]u8 = undefined;
-    const blocknum = fs.iblock(inum, static.sb);
+    const blocknum = fs.iblock(inum, &static.sb);
     try rsect(blocknum, &buf);
     try wstruct(ip.*, buf[@sizeOf(fs.DiskInode) * (inum % fs.IPB) ..]);
     try wsect(blocknum, &buf);
