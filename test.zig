@@ -94,12 +94,12 @@ pub fn main() void {
     // var name: [fs.DIRSIZE]u8 = undefined;
     // const np = dir.skipelem(".", &name);
     // std.debug.print("Result = {s}, rest = {s}\n", .{ name, np orelse "NULL" });
-    var name: [fs.DIRSIZE]u8 = undefined;
-    @memset(&name, 0);
-    @memcpy(name[0..13], "mkfs.zigaaaaa");
-    //const n = std.mem.span(@as([*:0]u8, @ptrCast(&name)));
-    const n = string.safeslice(@as([:0]u8, @ptrCast(&name)));
-    for (n, 0..) |c, i| {
-        std.debug.print("c[{d}] = {c} {d}\n", .{i, c, i});
-    }
+    // var name: [fs.DIRSIZE]u8 = undefined;
+    // @memset(&name, 0);
+    // @memcpy(name[0..13], "mkfs.zigaaaaa");
+    // //const n = std.mem.span(@as([*:0]u8, @ptrCast(&name)));
+    // const n = string.safeslice(@as([:0]u8, @ptrCast(&name)));
+    // for (n, 0..) |c, i| {
+    //     std.debug.print("c[{d}] = {c} {d}\n", .{i, c, i});
+    // }
 }

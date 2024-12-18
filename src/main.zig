@@ -48,6 +48,7 @@ export fn main() align(16) noreturn {
     trap.tvinit();
     bio.binit();
     ide.ideinit();
+    // TODO startothers()
     kalloc.kinit2(memlayout.p2v(4 * 1024 * 1024), memlayout.p2v(memlayout.PHYSTOP));
     proc.userinit();
     mpmain();

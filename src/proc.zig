@@ -260,7 +260,7 @@ fn forkret() void {
         if (ip) |inode| {
             inode.ilock();
             console.cputs("Found file, inode is:\n");
-            console.cprintf("inum = {d}, size = {d}, nlinks = {d}\n", .{inode.inum, inode.size, inode.nlink});
+            console.cprintf("inum = {d}, size = {d}, nlinks = {d}\n", .{ inode.inum, inode.size, inode.nlink });
             inode.iunlockput();
         } else {
             console.cputs("File not found :(\n");
@@ -272,7 +272,7 @@ fn forkret() void {
             const n = string.safeslice(@as([:0]u8, @ptrCast(&name)));
             inode.ilock();
             console.cprintf("Found root parent, name = {s}|\n", .{n});
-            console.cprintf("inum = {d}, size = {d}, nlinks = {d}\n", .{inode.inum, inode.size, inode.nlink});
+            console.cprintf("inum = {d}, size = {d}, nlinks = {d}\n", .{ inode.inum, inode.size, inode.nlink });
             inode.iunlockput();
         } else {
             console.cputs("Root parent not found :(\n");

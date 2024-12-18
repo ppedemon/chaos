@@ -5,21 +5,21 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     var disabled_features = Target.Cpu.Feature.Set.empty;
-    //var enabled_features = Target.Cpu.Feature.Set.empty;
+    var enabled_features = Target.Cpu.Feature.Set.empty;
 
-    //disabled_features.addFeature(@intFromEnum(Target.x86.Feature.mmx));
-    //disabled_features.addFeature(@intFromEnum(Target.x86.Feature.sse));
+    disabled_features.addFeature(@intFromEnum(Target.x86.Feature.mmx));
+    disabled_features.addFeature(@intFromEnum(Target.x86.Feature.sse));
     disabled_features.addFeature(@intFromEnum(Target.x86.Feature.sse2));
-    //disabled_features.addFeature(@intFromEnum(Target.x86.Feature.avx));
-    //disabled_features.addFeature(@intFromEnum(Target.x86.Feature.avx2));
+    disabled_features.addFeature(@intFromEnum(Target.x86.Feature.avx));
+    disabled_features.addFeature(@intFromEnum(Target.x86.Feature.avx2));
 
-    //enabled_features.addFeature(@intFromEnum(Target.x86.Feature.soft_float));
+    enabled_features.addFeature(@intFromEnum(Target.x86.Feature.soft_float));
 
     const target = b.resolveTargetQuery(.{
         .cpu_arch = Target.Cpu.Arch.x86,
         .os_tag = Target.Os.Tag.freestanding,
         .cpu_features_sub = disabled_features,
-        //.cpu_features_add = enabled_features,
+        .cpu_features_add = enabled_features,
     });
 
     const initCode = b.addAssembly(.{

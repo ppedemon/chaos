@@ -29,7 +29,7 @@ pub const SpinLock = struct {
 
         while (x86.xchg(&self.locked, 1) != 0) {}
 
-        // TODO Memmory fence here? xchg is supposed to act as a memory fence...
+        // TODO Memory fence here? xchg is supposed to act as a memory fence...
 
         self.cpu = proc.mycpu();
         getpcs(self.pcs[0..]);
@@ -42,7 +42,7 @@ pub const SpinLock = struct {
         self.pcs[0] = 0;
         self.cpu = null;
 
-        // TODO Memmory fence here? xchg is supposed to act as a memory fence...
+        // TODO Memory fence here? xchg is supposed to act as a memory fence...
 
         _ = x86.xchg(&self.locked, 0);
         popcli();
