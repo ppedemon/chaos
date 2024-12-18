@@ -1,4 +1,7 @@
 const std = @import("std");
+
+const dir = @import("src/dir.zig");
+const fs = @import("src/fs.zig");
 const string = @import("src/string.zig");
 
 var framebuf: [25 * 80]u16 = undefined;
@@ -67,12 +70,36 @@ pub fn main() void {
     // scrollup();
     // show();
 
-    var dst: [15:0]u8 = undefined;
-    string.safecpy(&dst, "initcode");
-    const n = string.safeslice(&dst);
-    std.debug.print("Scanned = {s}\n", .{n});
-    for (dst, 0..) |c, i| {
-        std.debug.print("dst[{d}] = {d}\n", .{i, c});
+    // var dst: [15:0]u8 = undefined;
+    // string.safecpy(&dst, "initcode");
+    // const n = string.safeslice(&dst);
+    // std.debug.print("Scanned = {s}\n", .{n});
+    // for (dst, 0..) |c, i| {
+    //     std.debug.print("dst[{d}] = {d}\n", .{i, c});
+    // }
+    // std.debug.print("dst[15] = {d}\n", .{dst[15]});
+
+    // const fs = @import("src/fs.zig");
+    // const dir = @import("src/dir.zig");
+
+    // const s: []const u8 = "a";
+
+    // const ts = "a";
+    // var t: [fs.DIRSIZE:0]u8 = undefined;
+    // @memset(&t, 0);
+    // @memcpy(t[0..ts.len], ts);
+
+    // std.debug.print("s == t = {}\n", .{dir.namecmp(&t, s)});
+
+    // var name: [fs.DIRSIZE]u8 = undefined;
+    // const np = dir.skipelem(".", &name);
+    // std.debug.print("Result = {s}, rest = {s}\n", .{ name, np orelse "NULL" });
+    var name: [fs.DIRSIZE]u8 = undefined;
+    @memset(&name, 0);
+    @memcpy(name[0..13], "mkfs.zigaaaaa");
+    //const n = std.mem.span(@as([*:0]u8, @ptrCast(&name)));
+    const n = string.safeslice(@as([:0]u8, @ptrCast(&name)));
+    for (n, 0..) |c, i| {
+        std.debug.print("c[{d}] = {c} {d}\n", .{i, c, i});
     }
-    std.debug.print("dst[15] = {d}\n", .{dst[15]});
 }

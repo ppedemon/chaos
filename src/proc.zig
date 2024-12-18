@@ -1,4 +1,5 @@
 const console = @import("console.zig");
+const dir = @import("dir.zig");
 const file = @import("file.zig");
 const fs = @import("fs.zig");
 const kalloc = @import("kalloc.zig");
@@ -173,8 +174,7 @@ pub fn userinit() void {
 
     string.safecpy(&p.name, "initcode");
 
-    // TODO implement
-    // p.cwd = namei("/");
+    p.cwd = dir.namei("/");
 
     ptable.lock.acquire();
     p.state = ProcState.RUNNABLE;
@@ -255,7 +255,29 @@ fn forkret() void {
         log.init(param.ROOTDEV);
 
         // Test, remove
-        fs.Inode.itest();
+        log.begin_op();
+        var ip = dir.namei("./.././mkfs.zig");
+        if (ip) |inode| {
+            inode.ilock();
+            console.cputs("Found file, inode is:\n");
+            console.cprintf("inum = {d}, size = {d}, nlinks = {d}\n", .{inode.inum, inode.size, inode.nlink});
+            inode.iunlockput();
+        } else {
+            console.cputs("File not found :(\n");
+        }
+
+        var name: [fs.DIRSIZE]u8 = undefined;
+        ip = dir.nameiparent("./.././.././../../../.././.././mkfs.zig", &name);
+        if (ip) |inode| {
+            const n = string.safeslice(@as([:0]u8, @ptrCast(&name)));
+            inode.ilock();
+            console.cprintf("Found root parent, name = {s}|\n", .{n});
+            console.cprintf("inum = {d}, size = {d}, nlinks = {d}\n", .{inode.inum, inode.size, inode.nlink});
+            inode.iunlockput();
+        } else {
+            console.cputs("Root parent not found :(\n");
+        }
+        log.end_op();
         console.cputs("Done testing\n");
     }
 
