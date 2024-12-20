@@ -51,7 +51,7 @@ fn append(n: *Buf) void {
     p.* = n;
 }
 
-pub fn main() void {
+pub fn main() !void {
     // var n = Buf{.n = 1};
     // append(&n);
 
@@ -102,4 +102,64 @@ pub fn main() void {
     // for (n, 0..) |c, i| {
     //     std.debug.print("c[{d}] = {c} {d}\n", .{i, c, i});
     // }
+
+    var buf: [512]u8 = undefined;
+    const res = try std.io.getStdIn().reader().readUntilDelimiter(&buf, '\n');
+    std.debug.print("Read: {s}\n", .{res});
+    const x: ?u32 = if (std.mem.eql(u8, res, "null")) null else 20;
+    std.debug.print("x = {?}\n", .{x});
+    const y: u32 = x orelse {
+        std.debug.print("BAD\n", .{});
+        return;
+    };
+    std.debug.print("y = {}\n", .{y});
+
+    {
+        std.debug.print("In block\n", .{});
+        defer std.debug.print("Leaving block\n", .{});
+        if (x) |_| {
+            std.debug.print("Returning\n", .{});
+            return;
+        }
+    }
+    std.debug.print("Not returned\n", .{});
+
+    var i: u32 = 0;
+    while (i < 5) : (i += 1) {
+        defer std.debug.print("Deferred for iteration {}\n", .{i});
+        if (i == 3) break;
+        std.debug.print("This is iteration {}\n", .{i});
+    }
+
+    // const File = struct {
+    //     ty: enum { FD_NONE, FD_PIPE, FI_INODE },
+    //     ref: u32,
+    //     readable: bool,
+    //     writable: bool,
+    // };
+
+    // var f: File = .{
+    //     .ty = .FD_NONE,
+    //     .ref = 1,
+    //     .readable = true,
+    //     .writable = false,
+    // };
+    // const pf: *File = &f;
+    // var fc: File = pf.*;
+
+    // pf.ty = .FI_INODE;
+    // pf.ref = 0;
+    // pf.readable = false;
+
+    // fc.ty = .FD_PIPE;
+    // fc.ref = 3;
+    // fc.writable = true;
+
+    // {
+    //     defer std.debug.print("Leaving block\n", .{});
+    //     std.debug.print("In block\n", .{});
+    // }
+
+    // std.debug.print("pf = {any}\n", .{pf.*});
+    // std.debug.print("fc = {any}\n", .{fc});
 }

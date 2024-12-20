@@ -34,7 +34,7 @@ fn freerange(vstart: usize, vend: usize) void {
     }
 }
 
-fn kfree(v: usize) void {
+pub fn kfree(v: usize) void {
     if (v % mmu.PGSIZE != 0 or v < @intFromPtr(&end) or memlayout.v2p(v) >= memlayout.PHYSTOP) {
         @panic("kfree");
     }

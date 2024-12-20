@@ -420,24 +420,6 @@ pub const Inode = struct {
 
         return n;
     }
-
-    pub fn itest() void {
-        var buf: [1024]u8 = undefined;
-        for (0..buf.len) |i| {
-            buf[i] = if (i % 2 == 0) 0xba else 0x0d;
-        }
-
-        log.begin_op();
-        const ip = Inode.iget(0, 2);
-        ip.ilock();
-        if (ip.writei(&buf, 7800, 1000)) |n| {
-            console.cprintf("write: {d} bytes\n", .{n});
-        } else {
-            console.cputs("Failed to write to file\n");
-        }
-        ip.iunlockput();
-        log.end_op();
-    }
 };
 
 pub fn iinit(dev: u32) void {
