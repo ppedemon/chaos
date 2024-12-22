@@ -40,11 +40,11 @@ pub fn dirlookup(dp: *fs.Inode, name: []const u8, poff_opt: ?*u32) ?*fs.Inode {
 }
 
 // Write a directory entry (name, inum) into the directory inode dp.
-// Returns true if the directory was linked, false if it already existed
-pub fn dirlink(dp: *fs.Inode, name: []const u8, inum: u32) bool {
+// Returns 0 if the directory was linked, -1 if it already existed
+pub fn dirlink(dp: *fs.Inode, name: []const u8, inum: u32) i32 {
     if (dirlookup(dp, name, null)) |ip| {
         ip.iput();
-        return false;
+        return -1;
     }
 
     var off: u32 = 0;
@@ -67,7 +67,7 @@ pub fn dirlink(dp: *fs.Inode, name: []const u8, inum: u32) bool {
         @panic("dirlink: write failure");
     }
 
-    return true;
+    return 0;
 }
 
 // Copy the next path element from path into name, and return
@@ -93,7 +93,7 @@ fn skipelem(path: []const u8, name: []u8) ?[]const u8 {
     return path[i..];
 }
 
-// Lookup and retunr the inode for a path name.
+// Lookup and return the inode for a path name.
 // If stop_at_parent is set, return the inode for the parent and set name
 // to the final path element. This must be called from a log transaction,
 // since it calls iput().

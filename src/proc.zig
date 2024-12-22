@@ -62,7 +62,7 @@ pub const Proc = struct {
 extern fn trapret() callconv(.C) void;
 extern fn swtch(old: **Context, new: *Context) callconv(.C) void;
 
-const initcode: []const u8 = @embedFile("initcode.bin");
+const initcode: []const u8 = @embedFile("init/initcode.bin");
 var initproc: *Proc = undefined;
 
 var ptable = struct {
@@ -254,35 +254,8 @@ fn forkret() void {
         fs.iinit(param.ROOTDEV);
         log.init(param.ROOTDEV);
 
-        // Test, remove
-        //log.begin_op();
-        // var ip = dir.namei("./.././mkfs.zig");
-        // if (ip) |inode| {
-        //     inode.ilock();
-        //     console.cputs("Found file, inode is:\n");
-        //     console.cprintf("inum = {d}, size = {d}, nlinks = {d}\n", .{ inode.inum, inode.size, inode.nlink });
-        //     inode.iunlockput();
-        // } else {
-        //     console.cputs("File not found :(\n");
-        // }
-
-        // var name: [fs.DIRSIZE]u8 = undefined;
-        // ip = dir.nameiparent("./.././.././../../../.././.././mkfs.zig", &name);
-        // if (ip) |inode| {
-        //     const n = string.safeslice(@as([:0]u8, @ptrCast(&name)));
-        //     inode.ilock();
-        //     console.cprintf("Found root parent, name = {s}|\n", .{n});
-        //     console.cprintf("inum = {d}, size = {d}, nlinks = {d}\n", .{ inode.inum, inode.size, inode.nlink });
-        //     inode.iunlockput();
-        // } else {
-        //     console.cputs("Root parent not found :(\n");
-        // }
-        //log.end_op();
-
-        if (file.File.falloc()) |f| {
-            f.fclose();
-        }
-
+        const exec = @import("exec.zig");
+        _ = exec.exec("./prog", undefined);
         console.cputs("Done testing\n");
     }
 

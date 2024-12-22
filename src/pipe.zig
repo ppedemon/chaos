@@ -24,12 +24,12 @@ pub const Pipe = struct {
         }
     }
 
-    pub fn palloc(fr: *?*file.File, fw: *?*file.File) bool {
+    pub fn palloc(fr: *?*file.File, fw: *?*file.File) i32 {
         fr.* = file.File.falloc();
         fw.* = file.File.falloc();
         if (fr.* == null or fw.* == null) {
             cleanup(fr, fw);
-            return false;
+            return -1;
         }
 
         const p = kalloc.kalloc() orelse return false;
@@ -53,7 +53,7 @@ pub const Pipe = struct {
             f.pipe = pipe;
         }
 
-        return true;
+        return 0;
     }
 
     pub fn pclose(self: *Self, writable: bool) void {

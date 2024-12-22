@@ -22,19 +22,38 @@ pub fn build(b: *std.Build) void {
         .cpu_features_add = enabled_features,
     });
 
+    // -------------------------------------------------------------------
+    const prog = b.addObject(.{
+        .name = "_prog",
+        .root_source_file = b.path("src/userland/prog.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const userCode = b.addExecutable(.{
+        .name = "prog",
+        .root_source_file = b.path("src/userland/crt.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    userCode.addObject(prog);
+    userCode.setLinkerScriptPath(b.path("src/userland/userland.ld"));
+    const userCodeInstall = b.addInstallBinFile(userCode.getEmittedBin(), "../../prog");
+    // -------------------------------------------------------------------
+
     const initCode = b.addAssembly(.{
         .name = "initcode",
-        .source_file = b.path("init/initcode.S"),
+        .source_file = b.path("src/init/initcode.S"),
         .target = target,
         .optimize = .ReleaseSmall,
     });
-    initCode.setLinkerScriptPath(b.path("init/initcode.ld"));
+    initCode.setLinkerScriptPath(b.path("src/init/initcode.ld"));
 
     const initCodeBin = b.addObjCopy(initCode.getEmittedBin(), .{
         .basename = "initcode.bin",
         .format = .bin,
     });
-    const initCodeInstall = b.addInstallFile(initCodeBin.getOutput(), "../src/initcode.bin");
+    const initCodeInstall = b.addInstallFile(initCodeBin.getOutput(), "../src/init/initcode.bin");
 
     const main = b.addObject(.{
         .name = "main",
@@ -78,4 +97,7 @@ pub fn build(b: *std.Build) void {
 
     const run_step = b.step("run", "run the kernel on qemu");
     run_step.dependOn(&qemu_cmd.step);
+
+    const user_step = b.step("userland", "build user programs");
+    user_step.dependOn(&userCodeInstall.step);
 }

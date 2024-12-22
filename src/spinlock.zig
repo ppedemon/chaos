@@ -4,6 +4,8 @@ const proc = @import("proc.zig");
 const string = @import("string.zig");
 const x86 = @import("x86.zig");
 
+const std = @import("std");
+
 pub const SpinLock = struct {
     locked: u32,
     name: []const u8,
@@ -27,9 +29,8 @@ pub const SpinLock = struct {
             @panic("acquire: already holding lock");
         }
 
-        while (x86.xchg(&self.locked, 1) != 0) {}
-
-        // TODO Memory fence here? xchg is supposed to act as a memory fence...
+        //while (x86.xchg(&self.locked, 1) != 0) {}
+        while(@cmpxchgWeak(u32, &self.locked, 0, 1, .seq_cst, .seq_cst)) |_| {}
 
         self.cpu = proc.mycpu();
         getpcs(self.pcs[0..]);
@@ -42,9 +43,8 @@ pub const SpinLock = struct {
         self.pcs[0] = 0;
         self.cpu = null;
 
-        // TODO Memory fence here? xchg is supposed to act as a memory fence...
-
-        _ = x86.xchg(&self.locked, 0);
+        //_ = x86.xchg(&self.locked, 0);
+        @atomicStore(u32, &self.locked, 0, .seq_cst);
         popcli();
     }
 

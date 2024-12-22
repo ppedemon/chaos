@@ -164,7 +164,7 @@ pub const Inode = struct {
     }
 
     // Find a slot in itable for an inode with number inum on device dev
-    pub fn iget(dev: u32, inum: u32) *Inode {
+    pub fn iget(dev: u32, inum: u32) *Self {
         itable.lock.acquire();
         defer itable.lock.release();
 
