@@ -27,14 +27,15 @@ pub fn build(b: *std.Build) void {
         .name = "_prog",
         .root_source_file = b.path("src/userland/prog.zig"),
         .target = target,
-        .optimize = optimize,
+        .optimize = .ReleaseSmall,
     });
 
     const userCode = b.addExecutable(.{
         .name = "prog",
-        .root_source_file = b.path("src/userland/crt.zig"),
+        .root_source_file = b.path("src/userland/start.zig"),
         .target = target,
-        .optimize = optimize,
+        .optimize = .ReleaseSmall,
+        .linkage = .static,
     });
     userCode.addObject(prog);
     userCode.setLinkerScriptPath(b.path("src/userland/userland.ld"));

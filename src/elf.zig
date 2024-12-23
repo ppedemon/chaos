@@ -18,7 +18,7 @@ pub const ElfHdr = extern struct {
     shstrndx: u16,
 };
 
-const ProgHdr = extern struct {
+pub const ProgHdr = extern struct {
   ty: u32,
   off: u32,
   vaddr: u32,

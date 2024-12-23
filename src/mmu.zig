@@ -128,6 +128,10 @@ pub const PTE_S = 0x080; // Size flag (1 = 4Mb pages, 0 = 4kb pages)
 pub const PdEntry = usize;
 pub const PtEntry = usize;
 
+pub fn addr(d: usize, t: usize, o: usize) usize {
+    return (d << PDXSHIFT) | (t << PTXSHIFT) | o;
+}
+
 pub fn pdx(v: usize) usize {
     return (v >> PDXSHIFT) & 0x3FF;
 }
@@ -192,5 +196,5 @@ pub const TaskState = extern struct {
     ldtr: u16,
     padding9: u16,
     t: u16,
-    iomb: u16
+    iomb: u16,
 };

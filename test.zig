@@ -103,33 +103,33 @@ pub fn main() !void {
     //     std.debug.print("c[{d}] = {c} {d}\n", .{i, c, i});
     // }
 
-    var buf: [512]u8 = undefined;
-    const res = try std.io.getStdIn().reader().readUntilDelimiter(&buf, '\n');
-    std.debug.print("Read: {s}\n", .{res});
-    const x: ?u32 = if (std.mem.eql(u8, res, "null")) null else 20;
-    std.debug.print("x = {?}\n", .{x});
-    const y: u32 = x orelse {
-        std.debug.print("BAD\n", .{});
-        return;
-    };
-    std.debug.print("y = {}\n", .{y});
+    // var buf: [512]u8 = undefined;
+    // const res = try std.io.getStdIn().reader().readUntilDelimiter(&buf, '\n');
+    // std.debug.print("Read: {s}\n", .{res});
+    // const x: ?u32 = if (std.mem.eql(u8, res, "null")) null else 20;
+    // std.debug.print("x = {?}\n", .{x});
+    // const y: u32 = x orelse {
+    //     std.debug.print("BAD\n", .{});
+    //     return;
+    // };
+    // std.debug.print("y = {}\n", .{y});
 
-    {
-        std.debug.print("In block\n", .{});
-        defer std.debug.print("Leaving block\n", .{});
-        if (x) |_| {
-            std.debug.print("Returning\n", .{});
-            return;
-        }
-    }
-    std.debug.print("Not returned\n", .{});
+    // {
+    //     std.debug.print("In block\n", .{});
+    //     defer std.debug.print("Leaving block\n", .{});
+    //     if (x) |_| {
+    //         std.debug.print("Returning\n", .{});
+    //         return;
+    //     }
+    // }
+    // std.debug.print("Not returned\n", .{});
 
-    var i: u32 = 0;
-    while (i < 5) : (i += 1) {
-        defer std.debug.print("Deferred for iteration {}\n", .{i});
-        if (i == 3) break;
-        std.debug.print("This is iteration {}\n", .{i});
-    }
+    // var i: u32 = 0;
+    // while (i < 5) : (i += 1) {
+    //     defer std.debug.print("Deferred for iteration {}\n", .{i});
+    //     if (i == 3) break;
+    //     std.debug.print("This is iteration {}\n", .{i});
+    // }
 
     // const File = struct {
     //     ty: enum { FD_NONE, FD_PIPE, FI_INODE },
@@ -162,4 +162,20 @@ pub fn main() !void {
 
     // std.debug.print("pf = {any}\n", .{pf.*});
     // std.debug.print("fc = {any}\n", .{fc});
+
+    var buf: [4096]u8 = [1]u8{0} ** 4096;
+    buf[0] = 'A';
+    buf[10] = 'B';
+    const p = @intFromPtr(&buf[0]);
+    const pbuf: [*]u8 = @ptrFromInt(p);
+    const slice: []u8 = pbuf[0..10000];
+
+    std.debug.print("buf[0] = {c}\n", .{buf[0]});
+    std.debug.print("p = 0x{x}\n", .{p});
+    std.debug.print("pbuf[0] = {c}\n", .{pbuf[0]});
+    std.debug.print("pbuf[10] = {c}\n", .{pbuf[10]});
+    std.debug.print("slice[0] = {c}\n", .{slice[0]});
+    std.debug.print("slice[10] = {c}\n", .{slice[10]});
+    std.debug.print("slice[30] = {d}\n", .{slice[30]});
+    std.debug.print("slice[6000] = {d}\n", .{slice[9500]});
 }

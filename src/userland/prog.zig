@@ -1,13 +1,7 @@
-fn scan(buf: []const u8, n: u8) ?u32 {
-    for (buf, 0..) |x, i| {
-        if (x == n) {
-            return i;
-        }
-    }
-    return null;
-}
-
-export fn main() callconv(.C) u32 {
-    const buf: [512]u8 = [1]u8{0} ** 512;
-    return scan(&buf, 1) orelse 0;
+export fn main(argc: usize, argv: [*][*:0]u8) callconv(.C) u32 {
+  var i: u32 = 0;
+  while (i < argc) : (i += 1) {
+    argv[i][2] = 'A';
+  }
+  return 0;
 }

@@ -254,6 +254,7 @@ fn forkret() void {
         fs.iinit(param.ROOTDEV);
         log.init(param.ROOTDEV);
 
+        // TODO test code, remove
         const exec = @import("exec.zig");
         _ = exec.exec("./prog", undefined);
         console.cputs("Done testing\n");

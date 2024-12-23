@@ -1,4 +1,5 @@
 const console = @import("console.zig");
+const fs = @import("fs.zig");
 const kalloc = @import("kalloc.zig");
 const memlayout = @import("memlayout.zig");
 const mmu = @import("mmu.zig");
@@ -197,4 +198,116 @@ pub fn inituvm(pgdir: [*]mmu.PdEntry, src: []const u8) void {
         @panic("inituvm: no free pages");
     }
     string.memmove(mem, @intFromPtr(&src[0]), src.len);
+}
+
+// Load a program segment into pgdir starting at the given addr, which must be
+// page aligned. Pages from addr + addr + sz must have been already mapped.
+pub fn loaduvm(pgdir: [*]mmu.PdEntry, addr: usize, ip: *fs.Inode, offset: u32, sz: usize) bool {
+    if (addr % mmu.PGSIZE != 0) {
+        @panic("loduvm: addr must be page aligned");
+    }
+    var i: usize = 0;
+    while (i < sz) : (i += mmu.PGSIZE) {
+        if (walkpgdir(pgdir, addr + i, false)) |pte| {
+            const va = memlayout.p2v(mmu.pteaddr(pte.*));
+            var buf: [*]u8 = @ptrFromInt(va);
+            const n = @min(sz - i, mmu.PGSIZE);
+            if (ip.readi(buf[0..n], offset + i, n) != n) {
+                return false;
+            }
+
+            // TODO debugging, remove
+            console.cprintf(">>> Read section of {} bytes\n", .{n});
+            for (0..n) |k| {
+                if (k > 0 and k % 16 == 0) {
+                    console.cputs("\n");
+                } else if (k > 0 and k % 8 == 0) {
+                    console.cputs("   ");
+                }
+                console.cprintf("{x:0>2} ", .{buf[k]});
+            }
+            console.cputs("\n");
+            //End of debugging code
+
+        } else {
+            @panic("loaduvm: address should be page mapped");
+        }
+    }
+    return true;
+}
+
+// Allocate page tables to grow process from oldsz to newsz. The param
+// newsz doesn't have to be page aligned. Return new size or 0 on error.
+pub fn allocuvm(pgdir: [*]mmu.PdEntry, oldsz: usize, newsz: usize) usize {
+    if (newsz > memlayout.KERNBASE) {
+        return 0;
+    }
+    if (newsz <= oldsz) {
+        return oldsz;
+    }
+
+    var a = mmu.pgroundup(oldsz);
+    while (a < newsz) : (a += mmu.PGSIZE) {
+        const mem = kalloc.kalloc() orelse {
+            console.cputs("allocuvm: out of memory\n");
+            _ = deallocuvm(pgdir, newsz, oldsz);
+            return 0;
+        };
+        string.memset(mem, 0, mmu.PGSIZE);
+        const ok = mappages(pgdir, a, mmu.PGSIZE, memlayout.v2p(mem), mmu.PTE_W | mmu.PTE_U);
+        if (!ok) {
+            console.cputs("allocuvm: out of memory\n");
+            _ = deallocuvm(pgdir, newsz, oldsz);
+            kalloc.kfree(mem);
+            return 0;
+        }
+    }
+    return newsz;
+}
+
+// Deallocate user pages to bring the process size from oldsz to newsz.
+// Size doesn't have top be page-aligned, not newsz be less than oldsz.
+// Also oldsz can be larger then the actual process size. Return newsz.
+fn deallocuvm(pgdir: [*]mmu.PdEntry, oldsz: usize, newsz: usize) usize {
+    if (newsz >= oldsz) {
+        return oldsz;
+    }
+    var a = mmu.pgroundup(newsz);
+    while (a < oldsz) : (a += mmu.PGSIZE) {
+        if (walkpgdir(pgdir, a, false)) |pte| {
+            if (pte.* & mmu.PTE_P != 0) {
+                // Page table present, so it points to a physical page frame.
+                // Get virtual address of page frame and kfree it.
+                const pa = mmu.pteaddr(pte.*);
+                if (pa == 0) {
+                    @panic("deallocuvm: null physical addr");
+                }
+                const va = memlayout.p2v(pa);
+                kalloc.kfree(va);
+                pte.* = 0;
+            }
+        } else {
+            // Page directory entry for virtual address 'a' has no page table pointer.
+            // Bump 'a' so it moves to next page table pointer in pgdir.
+            // NOTE: subtracting PGSIZE, since the while will increment it before next iteration.
+            a = mmu.addr(mmu.pdx(a) + 1, 0, 0) - mmu.PGSIZE;
+        }
+    }
+    return newsz;
+}
+
+pub fn freevm(pgdir: [*]mmu.PdEntry) void {
+    // Free pages
+    _ = deallocuvm(pgdir, memlayout.KERNBASE, 0);
+
+    // Free page tables pointed to by pgdir
+    for (0..mmu.NPDENTRIES) |i| {
+        if (pgdir[i] & mmu.PTE_P != 0) {
+            const va = memlayout.p2v(mmu.pteaddr(pgdir[i]));
+            kalloc.kfree(va);
+        }
+    }
+
+    // Free page directory itself
+    kalloc.kfree(@intFromPtr(pgdir));
 }
