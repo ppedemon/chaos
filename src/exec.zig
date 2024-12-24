@@ -73,9 +73,12 @@ pub fn exec(path: []const u8, _: [][]const u8) i32 {
         }
         const loaded = vm.loaduvm(pgdir, ph.vaddr, ip, ph.off, ph.filesz);
         if (!loaded) {
-          return -1;
+            return -1;
         }
         off += @sizeOf(elf.ProgHdr);
+
+        // TODO Debug code, remove
+        dumpuvm(pgdir, ph.vaddr, ph.memsz);
     }
     ip.iunlockput();
     log.end_op();
@@ -87,4 +90,19 @@ pub fn exec(path: []const u8, _: [][]const u8) i32 {
     console.cprintf("elf.phnum = 0x{x}\n", .{elfh.phnum});
     console.cprintf("elf.phoff = 0x{x}\n", .{elfh.phoff});
     return 0;
+}
+
+// Debug: dump vm contents of loaded user program
+fn dumpuvm(pgdir: [*]mmu.PdEntry, vstart: usize, sz: usize) void {
+    const memlayout = @import("memlayout.zig");
+    for (vstart..vstart + sz) |va| {
+        const pt_p = mmu.pteaddr(pgdir[mmu.pdx(va)]);
+        const pt: [*]mmu.PtEntry = @ptrFromInt(memlayout.p2v(pt_p));
+        const pg_p = mmu.pteaddr(pt[mmu.ptx(va)]);
+        const pa = pg_p + (va & 0xFFF);
+        const kva: *u8 = @ptrFromInt(memlayout.p2v(pa));
+        console.cprintf("uva = 0x{x}, pa = 0x{x}, kva = 0x{x}, v = 0x{x:0>2}\n", .{
+            va, pa, memlayout.p2v(pa), kva.*,
+        });
+    }
 }

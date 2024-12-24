@@ -217,16 +217,16 @@ pub fn loaduvm(pgdir: [*]mmu.PdEntry, addr: usize, ip: *fs.Inode, offset: u32, s
             }
 
             // TODO debugging, remove
-            console.cprintf(">>> Read section of {} bytes\n", .{n});
-            for (0..n) |k| {
-                if (k > 0 and k % 16 == 0) {
-                    console.cputs("\n");
-                } else if (k > 0 and k % 8 == 0) {
-                    console.cputs("   ");
-                }
-                console.cprintf("{x:0>2} ", .{buf[k]});
-            }
-            console.cputs("\n");
+            // console.cprintf(">>> Read section of {} bytes\n", .{n});
+            // for (0..n) |k| {
+            //     if (k > 0 and k % 16 == 0) {
+            //         console.cputs("\n");
+            //     } else if (k > 0 and k % 8 == 0) {
+            //         console.cputs("   ");
+            //     }
+            //     console.cprintf("{x:0>2} ", .{buf[k]});
+            // }
+            // console.cputs("\n");
             //End of debugging code
 
         } else {
