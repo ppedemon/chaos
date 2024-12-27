@@ -253,11 +253,6 @@ fn forkret() void {
         static.first = false;
         fs.iinit(param.ROOTDEV);
         log.init(param.ROOTDEV);
-
-        // TODO test code, remove
-        const exec = @import("exec.zig");
-        _ = exec.exec("./prog", @constCast(&[_][]const u8{ "ab", "abcd", "abc", "abdcef" }));
-        console.cputs("Done testing\n");
     }
 
     // This returns to trapret (see allocproc)

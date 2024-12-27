@@ -17,16 +17,16 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
     var elfh: elf.ElfHdr = undefined;
     var ph: elf.ProgHdr = undefined;
 
-    var cleanup_inode = false;
-    var cleanup_pg = false;
+    var cleanup_ip = false;
+    var cleanup_pgdir = false;
 
     defer {
-        if (cleanup_pg) {
-            vm.freevm(pgdir);
-        }
-        if (cleanup_inode) {
+        if (cleanup_ip) {
             ip.iunlockput();
             log.end_op();
+        }
+        if (cleanup_pgdir) {
+            vm.freevm(pgdir);
         }
     }
 
@@ -37,7 +37,7 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
         console.cprintf("exec: {s} not found", .{path});
         return -1;
     };
-    cleanup_inode = true;
+    cleanup_ip = true;
 
     ip.ilock();
     if (ip.readi(std.mem.asBytes(&elfh), 0, @sizeOf(elf.ElfHdr)) != @sizeOf(elf.ElfHdr)) {
@@ -50,7 +50,7 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
     pgdir = vm.setupkvm() orelse {
         return -1;
     };
-    cleanup_pg = true;
+    cleanup_pgdir = true;
 
     var sz: usize = 0;
     var off = elfh.phoff;
@@ -79,13 +79,10 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
             return -1;
         }
         off += @sizeOf(elf.ProgHdr);
-
-        // TODO Debug code, remove
-        // dumpuvm(pgdir, ph.vaddr, ph.memsz);
     }
     ip.iunlockput();
     log.end_op();
-    cleanup_inode = false;
+    cleanup_ip = false;
 
     // Allocate two further pages for user program starting at next page boundary:
     //
@@ -129,32 +126,15 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
     ustack[2] = sp - (argc + 1) * @sizeOf(usize); // points to future location of argv in page acting as stack
 
     sp -= (3 + argc + 1) * @sizeOf(usize);
-
-    // const memlayout = @import("memlayout.zig");
-    // console.cputs(">>> pg dir looks like:\n");
-    // var i: usize = 0;
-    // while (pgdir[i] != 0) : (i += 1) {
-    //     const pte_p = mmu.pteaddr(pgdir[i]);
-    //     console.cprintf("pgdir[{}] = 0x{x} (kva = 0x{x})\n", .{ i, pte_p, memlayout.p2v(pte_p) });
-
-    //     console.cputs(">>> page table looks like:\n");
-    //     const pte: [*]mmu.PtEntry = @ptrFromInt(memlayout.p2v(pte_p));
-    //     var j: usize = 0;
-    //     while (pte[j] != 0) : (j += 1) {
-    //         const pa = mmu.pteaddr(pte[j]);
-    //         console.cprintf("pte[{}] = 0x{x} (kva = 0x{x})\n", .{ j, pa, memlayout.p2v(pa) });
-    //     }
-    // }
-
     const slice: []const u8 = std.mem.sliceAsBytes(ustack[0..(3 + argc + 1)]);
-
-    // const pa = mmu.pteaddr(@as([*]mmu.PtEntry, @ptrFromInt(memlayout.p2v(mmu.pteaddr(pgdir[mmu.pdx(sp)]))))[mmu.ptx(sp)]) + (sp & 0xFFF);
-    // console.cprintf(">>> copyout: uva = 0x{x}, pa = 0x{x}, kva = 0x{x}, size = 0x{x}\n", .{ sp, pa, memlayout.p2v(pa), slice.len });
-
     const ok = vm.copyout(pgdir, sp, slice);
     if (!ok) {
         return -1;
     }
+
+    // NOTE from now on exec can't fail, so we *MUST* clear the cleanup_pgdir flag.
+    // Otherwise the deferred block will free the new process pgdir on exit!
+    cleanup_pgdir = false;
 
     const curproc: *proc.Proc = proc.myproc() orelse @panic("exec: no current process");
     var start: usize = 0;
@@ -162,14 +142,6 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
         start = index + 1;
     }
     string.safecpy(&curproc.name, path[start..]);
-    // console.cprintf("new proc name = {s}\n", .{curproc.name});
-
-    console.cprintf("sz = 0x{x}, sp[0] = 0x{x}, eip = 0x{x}, *eip = 0x{x}\n", .{
-        sz,
-        @as(*u32, @ptrFromInt(va2ka(pgdir, sp))).*,
-        elfh.entry,
-        @as(*u8, @ptrFromInt(va2ka(pgdir, elfh.entry))).*,
-    });
 
     const oldpgdir = curproc.pgdir;
     curproc.pgdir = pgdir;
@@ -179,32 +151,6 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
     vm.switchuvm(curproc);
     vm.freevm(oldpgdir);
 
-    // const ksp: [*]u32 = @ptrFromInt(va2ka(pgdir, sp));
-    // console.cprintf("fake ip addr = 0x{x}, kernel = {}, value = 0x{x}\n", .{ sp, &ksp[0], ksp[0] });
-    // console.cprintf("argc addr = 0x{x}, kernel = {}, value = {}\n", .{ sp + 4, &ksp[1], ksp[1] });
-    // console.cprintf("argv addr = 0x{x}, kernel = {}, value = 0x{x}\n", .{ sp + 8, &ksp[2], ksp[2] });
-    // for (0..ksp[1]) |i| {
-    //     console.cprintf("argv[{}] addr = 0x{x}, kernel = {}, value = 0x{x}\n", .{
-    //         i,
-    //         sp + 12 + 4 * i,
-    //         &ksp[3 + i],
-    //         ksp[3 + i],
-    //     });
-    // }
-    // console.cprintf("sentinel addr = 0x{x}, kernel = {}, value = 0x{x}\n", .{ sp + 28, &ksp[7], ksp[7] });
-
-    // const kargv: [*]usize = @ptrFromInt(va2ka(pgdir, ksp[2]));
-    // console.cprintf("argv = {*}\n", .{kargv});
-    // for (0..ksp[1]) |i| {
-    //     const arg: [*:0]u8 = @ptrFromInt(va2ka(pgdir, kargv[i]));
-    //     console.cprintf("arg[{}] = {s}\n", .{ i, arg });
-    // }
-
-    // console.cprintf("elf.ty = 0x{d}\n", .{elfh.ty});
-    // console.cprintf("elf.machine = 0x{x}\n", .{elfh.machine});
-    // console.cprintf("elf.entry = 0x{x}\n", .{elfh.entry});
-    // console.cprintf("elf.phnum = 0x{x}\n", .{elfh.phnum});
-    // console.cprintf("elf.phoff = 0x{x}\n", .{elfh.phoff});
     return 0;
 }
 
@@ -223,6 +169,7 @@ fn dumpuvm(pgdir: [*]mmu.PdEntry, vstart: usize, sz: usize) void {
     }
 }
 
+// Debug: turn a process virtual address into a kernel virtual address
 fn va2ka(pgdir: [*]mmu.PdEntry, va: usize) usize {
     const memlayout = @import("memlayout.zig");
     const pt_ptr: [*]mmu.PtEntry = @ptrFromInt(memlayout.p2v(mmu.pteaddr(pgdir[mmu.pdx(va)])));
