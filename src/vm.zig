@@ -215,20 +215,6 @@ pub fn loaduvm(pgdir: [*]mmu.PdEntry, addr: usize, ip: *fs.Inode, offset: u32, s
             if (ip.readi(buf[0..n], offset + i, n) != n) {
                 return false;
             }
-
-            // TODO debugging, remove
-            // console.cprintf(">>> Read section of {} bytes\n", .{n});
-            // for (0..n) |k| {
-            //     if (k > 0 and k % 16 == 0) {
-            //         console.cputs("\n");
-            //     } else if (k > 0 and k % 8 == 0) {
-            //         console.cputs("   ");
-            //     }
-            //     console.cprintf("{x:0>2} ", .{buf[k]});
-            // }
-            // console.cputs("\n");
-            //End of debugging code
-
         } else {
             @panic("loaduvm: address should be page mapped");
         }
@@ -310,4 +296,49 @@ pub fn freevm(pgdir: [*]mmu.PdEntry) void {
 
     // Free page directory itself
     kalloc.kfree(@intFromPtr(pgdir));
+}
+
+// Make the page corresponding to the given va inaccessible to user code.
+// Useful to create a 1-page safety zone beneath user stack. This way we
+// proetct user code against stack overflow.
+pub fn clearpteu(pgdir: [*]mmu.PdEntry, va: usize) void {
+    if (walkpgdir(pgdir, va, false)) |pte| {
+        pte.* &= ~@as(usize, mmu.PTE_U);
+        return;
+    }
+    @panic("clearpteu: no page");
+}
+
+// map user virtual address to kernel virtual address
+fn uva2ka(pgdir: [*]mmu.PdEntry, uva: usize) usize {
+    if (walkpgdir(pgdir, uva, false)) |pte| {
+        if (pte.* & mmu.PTE_P == 0 or pte.* & mmu.PTE_U == 0) {
+            return 0;
+        }
+        return memlayout.p2v(mmu.pteaddr(pte.*));
+    }
+    @panic("uva2ka: no page");
+}
+
+// Copy the slice p to user address va in page directory pgdir.
+// Used to move stuff from kernel to user address space.
+pub fn copyout(pgdir: [*]mmu.PdEntry, va: usize, p: []const u8) bool {
+    var i: usize = 0;
+    var len = p.len;
+    var v = va;
+
+    while (len > 0) {
+        const va_boundary = mmu.pgrounddown(v);
+        const pa_boundary = uva2ka(pgdir, va_boundary);
+        if (pa_boundary == 0) {
+            return false;
+        }
+        const n = @min(len, mmu.PGSIZE - (va - va_boundary));
+        string.memmove(pa_boundary + (va - va_boundary), @intFromPtr(&p[i]), n);
+        len -= n;
+        i += n;
+        v = va_boundary + mmu.PGSIZE;
+    }
+
+    return true;
 }

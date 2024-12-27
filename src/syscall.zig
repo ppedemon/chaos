@@ -1,21 +1,49 @@
-const SYS_FORK = 1;
-const SYS_EXIT = 2;
-const SYS_WAIT = 3;
-const SYS_PIPE = 4;
-const SYS_READ = 5;
-const SYS_KILL = 6;
-const SYS_EXEC = 7;
-const SYS_FSTAT = 8;
-const SYS_CHDIR = 9;
-const SYS_DUP = 10;
-const SYS_GETPID = 11;
-const SYS_SBRK = 12;
-const SYS_SLEEP = 13;
-const SYS_UPTIME = 14;
-const SYS_OPEN = 15;
-const SYS_WRITE = 16;
-const SYS_MKNOD = 17;
-const SYS_UNLINK = 18;
-const SYS_LINK = 19;
-const SYS_MKDIR = 20;
-const SYS_CLOSE = 21;
+const SYS_fork = 1;
+const SYS_exit = 2;
+const SYS_wait = 3;
+const SYS_pipe = 4;
+const SYS_read = 5;
+const SYS_kill = 6;
+const SYS_exec = 7;
+const SYS_fstat = 8;
+const SYS_chdir = 9;
+const SYS_dup = 10;
+const SYS_getpid = 11;
+const SYS_sbrk = 12;
+const SYS_sleep = 13;
+const SYS_uptime = 14;
+const SYS_open = 15;
+const SYS_write = 16;
+const SYS_mknod = 17;
+const SYS_unlink = 18;
+const SYS_link = 19;
+const SYS_mkdir = 20;
+const SYS_close = 21;
+
+fn unimplemented() i32 {
+  @panic("system call not implemented");
+}
+
+const syscalls = [_]*const fn()i32 {
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+  unimplemented,
+};

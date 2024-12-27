@@ -163,19 +163,36 @@ pub fn main() !void {
     // std.debug.print("pf = {any}\n", .{pf.*});
     // std.debug.print("fc = {any}\n", .{fc});
 
-    var buf: [4096]u8 = [1]u8{0} ** 4096;
-    buf[0] = 'A';
-    buf[10] = 'B';
-    const p = @intFromPtr(&buf[0]);
-    const pbuf: [*]u8 = @ptrFromInt(p);
-    const slice: []u8 = pbuf[0..10000];
+    // var buf: [4096]u8 = [1]u8{0} ** 4096;
+    // buf[0] = 'A';
+    // buf[10] = 'B';
+    // const p = @intFromPtr(&buf[0]);
+    // const pbuf: [*]u8 = @ptrFromInt(p);
+    // const slice: []u8 = pbuf[0..10000];
 
-    std.debug.print("buf[0] = {c}\n", .{buf[0]});
-    std.debug.print("p = 0x{x}\n", .{p});
-    std.debug.print("pbuf[0] = {c}\n", .{pbuf[0]});
-    std.debug.print("pbuf[10] = {c}\n", .{pbuf[10]});
-    std.debug.print("slice[0] = {c}\n", .{slice[0]});
-    std.debug.print("slice[10] = {c}\n", .{slice[10]});
-    std.debug.print("slice[30] = {d}\n", .{slice[30]});
-    std.debug.print("slice[6000] = {d}\n", .{slice[9500]});
+    // std.debug.print("buf[0] = {c}\n", .{buf[0]});
+    // std.debug.print("p = 0x{x}\n", .{p});
+    // std.debug.print("pbuf[0] = {c}\n", .{pbuf[0]});
+    // std.debug.print("pbuf[10] = {c}\n", .{pbuf[10]});
+    // std.debug.print("slice[0] = {c}\n", .{slice[0]});
+    // std.debug.print("slice[10] = {c}\n", .{slice[10]});
+    // std.debug.print("slice[30] = {d}\n", .{slice[30]});
+    // std.debug.print("slice[6000] = {d}\n", .{slice[9500]});
+
+    //f(@constCast(&[_][]const u8 {"a", "b", "c"}));
+    const a: []const u8 = "a";
+    const b: []const u8 = "b";
+    const c: []const u8 = "c";
+    const argv: [][]const u8 = @constCast(&[_][]const u8{a, b, c});
+    f(@constCast(argv));
+
+    var cstr: [15:0]u8 = undefined;
+    @memset(&cstr, 0);
+    std.debug.print("len = {}\n", .{cstr.len});
+}
+
+fn f(argv: []const []const u8) void {
+    for (argv, 0..) |arg, i| {
+        std.debug.print("argv[{}] = {s}\n", .{i, arg});
+    }
 }

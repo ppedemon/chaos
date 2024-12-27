@@ -256,7 +256,7 @@ fn forkret() void {
 
         // TODO test code, remove
         const exec = @import("exec.zig");
-        _ = exec.exec("./prog", undefined);
+        _ = exec.exec("./prog", @constCast(&[_][]const u8{ "ab", "abcd", "abc", "abdcef" }));
         console.cputs("Done testing\n");
     }
 
