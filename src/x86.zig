@@ -32,7 +32,7 @@ pub inline fn stos(comptime Type: type, dst: usize, data: Type, count: usize) vo
 }
 
 pub inline fn insl(port: u16, dst: usize, count: usize) void {
-    asm volatile(
+    asm volatile (
         \\ cld
         \\ rep insl
         :
@@ -44,7 +44,7 @@ pub inline fn insl(port: u16, dst: usize, count: usize) void {
 }
 
 pub inline fn outsl(port: u16, src: usize, count: usize) void {
-    asm volatile(
+    asm volatile (
         \\ cld
         \\ rep outsl
         :
@@ -130,7 +130,7 @@ pub inline fn ltr(tsel: u16) void {
     asm volatile (
         \\ ltr %[tsel]
         :
-        : [tsel] "{eax}" (tsel)
+        : [tsel] "{eax}" (tsel),
     );
 }
 
@@ -165,6 +165,13 @@ pub inline fn xchg(addr: *u32, newval: u32) u32 {
         : [addr] "r" (addr),
           [newval] "{eax}" (newval),
         : "memory"
+    );
+}
+
+pub inline fn rcr2() u32 {
+    return asm volatile (
+        \\ movl %cr2, %[result]
+        : [result] "={eax}" (-> u32),
     );
 }
 

@@ -4,4 +4,4 @@ zig-out/
 src/init/initcode.bin
 
 fs.img
-prog
+init

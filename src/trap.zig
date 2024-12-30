@@ -5,6 +5,7 @@ const mmu = @import("mmu.zig");
 const lapic = @import("lapic.zig");
 const proc = @import("proc.zig");
 const spinlock = @import("spinlock.zig");
+const syscall = @import("syscall.zig");
 const uart = @import("uart.zig");
 const x86 = @import("x86.zig");
 
@@ -69,24 +70,35 @@ pub fn idtinit() void {
     x86.lidt(@intFromPtr(&idt), @sizeOf(@TypeOf(idt)));
 }
 
-var times: usize = 0;
+// var times: usize = 0;
 
 export fn trap(tf: *x86.TrapFrame) callconv(.C) void {
     if (tf.trapno == T_SYSCALL) {
-        // TODO sys calls
-        times +%= 1;
-        if (times % 1_000_000 == 0) {
-            console.cputs("This should be exec, called form init code\n");
+        const currproc: *proc.Proc = proc.myproc() orelse @panic("trap: no proc for syscall");
+        if (currproc.killed) {
+            proc.exit();
+        }
+        currproc.tf = tf;
+        syscall.syscall();
+        if (currproc.killed) {
+            proc.exit();
         }
         return;
+        // times +%= 1;
+        // if (times % 1_000_000 == 0) {
+        //     console.cputs("This should be exec, called form init code\n");
+        // }
+        // return;
     }
 
     switch (tf.trapno) {
         T_IRQ0 + IRQ_TIMER => {
-            tickslock.acquire();
-            ticks +%= 1;
-            proc.wakeup(@intFromPtr(&ticks));
-            tickslock.release();
+            if (proc.cpuid() == 0) {
+                tickslock.acquire();
+                ticks +%= 1;
+                proc.wakeup(@intFromPtr(&ticks));
+                tickslock.release();
+            }
             lapic.lapiceoi();
         },
         T_IRQ0 + IRQ_KBD => {
@@ -101,15 +113,46 @@ export fn trap(tf: *x86.TrapFrame) callconv(.C) void {
             ide.ideintr();
             lapic.lapiceoi();
         },
+        T_IRQ0 + 7, T_IRQ0 + IRQ_SPURIOUS => {
+            console.cprintf("cpu{d}: spurious interrupt at {x}:{x}\n", .{ proc.cpuid(), tf.cs, tf.eip });
+            lapic.lapiceoi();
+        },
         else => {
-            console.cprintf(">>> Trapno = {d}\n", .{tf.trapno});
-            @panic("Unhandled Exception");
+            if (proc.myproc() == null or (tf.cs & 3) == 0) {
+                // We trapped from the kernel, there's some programming error :(
+                console.cprintf("Unexpected trap {d} from cpu {d} eip = {x} cr2 = 0x{x}\n", .{
+                    tf.trapno,
+                    proc.cpuid(),
+                    tf.eip,
+                    x86.rcr2(),
+                });
+                @panic("trap");
+            } else {
+                // Some userland app trapped
+                console.cprintf("pid {d} {s}: trap {d} err {d} on cpu {d} eip = {x} addr = 0x{x} (killing)\n", .{
+                    proc.myproc().?.pid,
+                    proc.myproc().?.name,
+                    tf.trapno,
+                    tf.err,
+                    proc.cpuid(),
+                    tf.eip,
+                    x86.rcr2(),
+                });
+                proc.myproc().?.killed = true;
+            }
         },
     }
 
     if (proc.myproc()) |p| {
-        if (p.state == proc.ProcState.RUNNING) {
+        if (p.killed and (tf.cs & 3) == mmu.DPL_USER) {
+            proc.exit();
+        }
+        if (p.state == proc.ProcState.RUNNING and tf.trapno == T_IRQ0 + IRQ_TIMER) {
             proc.yield();
+        }
+        // NOTE: process might have been killed since yielding
+        if (p.killed and (tf.cs & 3) == mmu.DPL_USER) {
+            proc.exit();
         }
     }
 }

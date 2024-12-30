@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
     // -------------------------------------------------------------------
     const prog = b.addObject(.{
         .name = "_prog",
-        .root_source_file = b.path("src/userland/prog.zig"),
+        .root_source_file = b.path("src/userland/init.zig"),
         .target = target,
         .optimize = .ReleaseSmall,
     });
@@ -39,7 +39,7 @@ pub fn build(b: *std.Build) void {
     });
     userCode.addObject(prog);
     userCode.setLinkerScriptPath(b.path("src/userland/userland.ld"));
-    const userCodeInstall = b.addInstallBinFile(userCode.getEmittedBin(), "../../prog");
+    const userCodeInstall = b.addInstallBinFile(userCode.getEmittedBin(), "../../init");
     // -------------------------------------------------------------------
 
     const initCode = b.addAssembly(.{

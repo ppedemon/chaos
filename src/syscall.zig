@@ -1,5 +1,6 @@
 const console = @import("console.zig");
 const proc = @import("proc.zig");
+const sysfile = @import("sysfile.zig");
 
 const SYS_fork = 1;
 const SYS_exit = 2;
@@ -38,7 +39,7 @@ const syscalls = [_]*const fn () i32{
     unimplemented,
     unimplemented,
     unimplemented,
-    unimplemented,
+    sysfile.sys_exec,
     unimplemented,
     unimplemented,
     unimplemented,
@@ -54,8 +55,19 @@ const syscalls = [_]*const fn () i32{
     unimplemented,
 };
 
+pub fn syscall() void {
+    const currproc: *proc.Proc = proc.myproc() orelse @panic("syscall: no proc");
+    const num = currproc.tf.eax;
+    if (num > 0 and num < syscalls.len) {
+        currproc.tf.eax = @intCast(syscalls[num]());
+    } else {
+        console.cprintf("{d} {s}: unknow syscall {d}\n", .{ currproc.pid, currproc.name, num });
+        currproc.tf.eax = 0xFFFF_FFFF; // That is, -1
+    }
+}
+
 pub fn fetchint(addr: usize, ip: *i32) i32 {
-    const p: proc.Proc = proc.myproc() orelse @panic("fetchint: no process");
+    const p: *proc.Proc = proc.myproc() orelse @panic("fetchint: no process");
     if (addr >= p.sz or addr + @sizeOf(i32) > p.sz) {
         return -1;
     }
@@ -64,7 +76,7 @@ pub fn fetchint(addr: usize, ip: *i32) i32 {
 }
 
 pub fn fetchstr(addr: usize, pp: *[]const u8) i32 {
-    const p: proc.Proc = proc.myproc() orelse @panic("fetchstr: no process");
+    const p: *proc.Proc = proc.myproc() orelse @panic("fetchstr: no process");
     if (addr >= p.sz) {
         return -1;
     }
@@ -83,7 +95,7 @@ pub fn argint(n: usize, ip: *i32) i32 {
 }
 
 pub fn argptr(n: usize, pp: *[]const u8, size: usize) i32 {
-    const p: proc.Proc = proc.myproc() orelse @panic("argptr: no process");
+    const p: *proc.Proc = proc.myproc() orelse @panic("argptr: no process");
 
     var i: i32 = undefined;
     if (argint(n, &i) < 0) {
