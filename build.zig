@@ -23,23 +23,41 @@ pub fn build(b: *std.Build) void {
     });
 
     // -------------------------------------------------------------------
-    const prog = b.addObject(.{
-        .name = "_prog",
+    const initObj = b.addObject(.{
+        .name = "_init",
         .root_source_file = b.path("src/userland/init.zig"),
         .target = target,
         .optimize = .ReleaseSmall,
     });
 
-    const userCode = b.addExecutable(.{
-        .name = "prog",
+    const init = b.addExecutable(.{
+        .name = "init",
         .root_source_file = b.path("src/userland/start.zig"),
         .target = target,
         .optimize = .ReleaseSmall,
         .linkage = .static,
     });
-    userCode.addObject(prog);
-    userCode.setLinkerScriptPath(b.path("src/userland/userland.ld"));
-    const userCodeInstall = b.addInstallBinFile(userCode.getEmittedBin(), "../../init");
+    init.addObject(initObj);
+    init.setLinkerScriptPath(b.path("src/userland/userland.ld"));
+    const initInstall = b.addInstallBinFile(init.getEmittedBin(), "../../init");
+
+    const shObj = b.addObject(.{
+        .name = "_sh",
+        .root_source_file = b.path("src/userland/sh.zig"),
+        .target = target,
+        .optimize = .ReleaseSmall,
+    });
+
+    const sh = b.addExecutable(.{
+        .name = "sh",
+        .root_source_file = b.path("src/userland/start.zig"),
+        .target = target,
+        .optimize = .ReleaseSmall,
+        .linkage = .static,
+    });
+    sh.addObject(shObj);
+    sh.setLinkerScriptPath(b.path("src/userland/userland.ld"));
+    const shInstall = b.addInstallBinFile(sh.getEmittedBin(), "../../sh");
     // -------------------------------------------------------------------
 
     const initCode = b.addAssembly(.{
@@ -100,5 +118,6 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&qemu_cmd.step);
 
     const user_step = b.step("userland", "build user programs");
-    user_step.dependOn(&userCodeInstall.step);
+    user_step.dependOn(&initInstall.step);
+    user_step.dependOn(&shInstall.step);
 }

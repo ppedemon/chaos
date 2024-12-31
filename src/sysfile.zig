@@ -1,3 +1,4 @@
+const console = @import("console.zig");
 const param = @import("param.zig");
 const exec = @import("exec.zig");
 const syscall = @import("syscall.zig");
@@ -34,11 +35,10 @@ pub fn sys_exec() i32 {
 
     const exec_argv: []const []const u8 = argv[0..i];
 
-    // const console = @import("console.zig");
-    // console.cprintf("path = {s}\n", .{path});
-    // for (exec_argv, 0..) |arg, j| {
-    //     console.cprintf("argv[{}] = {s}\n", .{ j, arg });
-    // }
+    console.cprintf("path = {s}\n", .{path});
+    for (exec_argv, 0..) |arg, j| {
+        console.cprintf("argv[{}] = {s}\n", .{ j, arg });
+    }
 
     return exec.exec(path, exec_argv);
 }

@@ -181,77 +181,110 @@ pub fn main() !void {
 
     //f(@constCast(&[_][]const u8 {"a", "b", "c"}));
 
-    var page: [4096]u8 align(4) = [_]u8{0} ** 4096;
-    var stack: [*]u8 = @ptrCast(&page);
+    // var page: [4096]u8 align(4) = [_]u8{0} ** 4096;
+    // var stack: [*]u8 = @ptrCast(&page);
 
-    p.sz = @intFromPtr(&stack[4095]);
+    // p.sz = @intFromPtr(&stack[4095]);
 
-    // str at 0xff8
-    const str = "abcde";
-    p.esp = page.len - (str.len + 1) & ~@as(usize, 7);
-    @memcpy(stack[p.esp .. p.esp + str.len], str);
-    std.debug.print("str = 0x{x}, offset = 0x{x}\n", .{
-        &stack[p.esp],
-        @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
-    });
+    // // str at 0xff8
+    // const str = "abcde";
+    // p.esp = page.len - (str.len + 1) & ~@as(usize, 7);
+    // @memcpy(stack[p.esp .. p.esp + str.len], str);
+    // std.debug.print("str = 0x{x}, offset = 0x{x}\n", .{
+    //     &stack[p.esp],
+    //     @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
+    // });
 
-    // ptr to str at 0xff0
-    p.esp -= @sizeOf(usize);
-    var ptr: *usize = @ptrCast(@alignCast(&stack[p.esp]));
-    ptr.* = @intFromPtr(&stack[p.esp]) + @sizeOf(usize);
-    std.debug.print("pointer to str = 0x{x}, offset = 0x{x}\n", .{
-        &stack[p.esp],
-        @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
-    });
+    // // ptr to str at 0xff0
+    // p.esp -= @sizeOf(usize);
+    // var ptr: *usize = @ptrCast(@alignCast(&stack[p.esp]));
+    // ptr.* = @intFromPtr(&stack[p.esp]) + @sizeOf(usize);
+    // std.debug.print("pointer to str = 0x{x}, offset = 0x{x}\n", .{
+    //     &stack[p.esp],
+    //     @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
+    // });
 
-    // 0xcafe_babe at 0xfe8
-    p.esp -= @sizeOf(usize);
-    ptr = @alignCast(@ptrCast(&stack[p.esp]));
-    ptr.* = 0x0bad_babe;
-    std.debug.print("int = 0x{x}, offset = 0x{x}\n", .{
-        &stack[p.esp],
-        @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
-    });
+    // // 0xcafe_babe at 0xfe8
+    // p.esp -= @sizeOf(usize);
+    // ptr = @alignCast(@ptrCast(&stack[p.esp]));
+    // ptr.* = 0x0bad_babe;
+    // std.debug.print("int = 0x{x}, offset = 0x{x}\n", .{
+    //     &stack[p.esp],
+    //     @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
+    // });
 
-    // buffer of size 0x10 at 0xfd8
-    p.esp -= 0x10;
-    const addr = &stack[p.esp];
-    @memset(stack[p.esp..p.esp + 0x10], 0xfa);
-    std.debug.print("buffer = 0x{x}, offset = 0x{x}\n", .{
-        &stack[p.esp],
-        @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
-    });
+    // // buffer of size 0x10 at 0xfd8
+    // p.esp -= 0x10;
+    // const addr = &stack[p.esp];
+    // @memset(stack[p.esp..p.esp + 0x10], 0xfa);
+    // std.debug.print("buffer = 0x{x}, offset = 0x{x}\n", .{
+    //     &stack[p.esp],
+    //     @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
+    // });
 
-    // Pointer to buffer in 0xfd0
-    p.esp -= @sizeOf(usize);
-    ptr = @alignCast(@ptrCast(&stack[p.esp]));
-    ptr.* = @intFromPtr(addr);
-    std.debug.print("pointer to buffer = 0x{x}, offset = 0x{x}\n", .{
-        &stack[p.esp],
-        @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
-    });
+    // // Pointer to buffer in 0xfd0
+    // p.esp -= @sizeOf(usize);
+    // ptr = @alignCast(@ptrCast(&stack[p.esp]));
+    // ptr.* = @intFromPtr(addr);
+    // std.debug.print("pointer to buffer = 0x{x}, offset = 0x{x}\n", .{
+    //     &stack[p.esp],
+    //     @intFromPtr(&stack[p.esp]) - @intFromPtr(&stack[0]),
+    // });
 
-    p.esp -= @sizeOf(usize);
-    p.esp = @intFromPtr(&stack[p.esp]);
-    std.debug.print("esp = 0x{x}, offset = 0x{x}\n", .{
-        p.esp,
-        p.esp - @intFromPtr(&stack[0]),
-    });
+    // p.esp -= @sizeOf(usize);
+    // p.esp = @intFromPtr(&stack[p.esp]);
+    // std.debug.print("esp = 0x{x}, offset = 0x{x}\n", .{
+    //     p.esp,
+    //     p.esp - @intFromPtr(&stack[0]),
+    // });
 
     // Time to test arg functions
-    var i: i64 = undefined;
-    var ok = argint(3, &i); // We count args from zero
-    std.debug.print("i = 0x{x}, ok = {}\n", .{ i, ok });
+    // var i: i64 = undefined;
+    // var ok = argint(3, &i); // We count args from zero
+    // std.debug.print("i = 0x{x}, ok = {}\n", .{ i, ok });
 
-    var pp: []const u8 = undefined;
-    const len = argstr(4, &pp);
-    std.debug.print("len = {}, string = {s}, len = {}\n", .{len, pp, pp.len});
+    // var pp: []const u8 = undefined;
+    // const len = argstr(4, &pp);
+    // std.debug.print("len = {}, string = {s}, len = {}\n", .{len, pp, pp.len});
 
-    ok = argptr(0, &pp, 0x10);
-    std.debug.print("buf addr = 0x{x}, len = {}, ok = {}\n", .{&pp[0], pp.len, ok});
-    for (pp, 0..) |c, ix| {
-        std.debug.print("buf[{d}] = 0x{x}\n", .{ix, c});
+    // ok = argptr(0, &pp, 0x10);
+    // std.debug.print("buf addr = 0x{x}, len = {}, ok = {}\n", .{&pp[0], pp.len, ok});
+    // for (pp, 0..) |c, ix| {
+    //     std.debug.print("buf[{d}] = 0x{x}\n", .{ix, c});
+    // }
+
+    const argv: [*]?[*:0]const u8 = @constCast(@ptrCast(&[_]?[*:0]const u8{
+        "first",
+        "second",
+        "third",
+        null,
+    }));
+
+    exec("/initcode", argv);
+}
+
+fn exec(path: [*:0]const u8, argv: [*]?[*:0]const u8) void {
+    var i: usize = 0;
+    while (path[i] != 0) : (i += 1) {
+        std.debug.print("path[{}] = {c}\n", .{ i, path[i] });
     }
+
+    i = 0;
+    while (argv[i] != null) : (i += 1) {
+        const args = argv[i].?;
+        var j: usize = 0;
+        while (args[j] != 0) : (j += 1) {
+            std.debug.print("args[{}][{}] = {c}\n", .{ i, j, args[j] });
+        }
+    }
+
+    std.debug.print("&argv = {}\n", .{&argv});
+    std.debug.print("&argv[0] = {}\n", .{&argv[0]});
+    std.debug.print("&argv[1] = {}\n", .{&argv[1]});
+
+    const n: i32 = if (i % 2 == 1) -1 else 1;
+    const m: u32 = @intCast(n);
+    std.debug.print("m = {}\n", .{m});
 }
 
 const Proc = struct {
