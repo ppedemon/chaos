@@ -68,15 +68,15 @@ pub const File = struct {
         }
     }
 
-    pub fn fstat(self: *Self, st: *stat.Stat) i32 {
+    pub fn fstat(self: *Self, st: *stat.Stat) bool {
         if (self.ty == .FD_INODE) {
             const inode: *fs.Inode = self.inode orelse @panic("fstat: no inode");
             inode.ilock();
             inode.stati(st);
             inode.iunlock();
-            return 0;
+            return true;
         }
-        return -1;
+        return false;
     }
 
     pub fn fread(self: *Self, buf: []u8, n: u32) ?u32 {

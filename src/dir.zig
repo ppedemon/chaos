@@ -40,11 +40,11 @@ pub fn dirlookup(dp: *fs.Inode, name: []const u8, poff_opt: ?*u32) ?*fs.Inode {
 }
 
 // Write a directory entry (name, inum) into the directory inode dp.
-// Returns 0 if the directory was linked, -1 if it already existed
-pub fn dirlink(dp: *fs.Inode, name: []const u8, inum: u32) i32 {
+// Returns true if the directory was linked, false4 if it already existed.
+pub fn dirlink(dp: *fs.Inode, name: []const u8, inum: u32) bool {
     if (dirlookup(dp, name, null)) |ip| {
         ip.iput();
-        return -1;
+        return false;
     }
 
     var off: u32 = 0;
@@ -67,7 +67,7 @@ pub fn dirlink(dp: *fs.Inode, name: []const u8, inum: u32) i32 {
         @panic("dirlink: write failure");
     }
 
-    return 0;
+    return true;
 }
 
 // Copy the next path element from path into name, and return
