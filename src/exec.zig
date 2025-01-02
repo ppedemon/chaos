@@ -1,6 +1,7 @@
 const console = @import("console.zig");
 const dir = @import("dir.zig");
 const elf = @import("elf.zig");
+const err = @import("err.zig");
 const fs = @import("fs.zig");
 const log = @import("log.zig");
 const mmu = @import("mmu.zig");
@@ -11,7 +12,7 @@ const vm = @import("vm.zig");
 
 const std = @import("std");
 
-pub fn exec(path: []const u8, argv: []const []const u8) i32 {
+pub fn exec(path: []const u8, argv: []const []const u8) err.SysErr!u32 {
     var ip: *fs.Inode = undefined;
     var pgdir: [*]mmu.PdEntry = undefined;
     var elfh: elf.ElfHdr = undefined;
@@ -35,20 +36,20 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
     ip = dir.namei(path) orelse {
         log.end_op();
         console.cprintf("exec: {s} not found", .{path});
-        return -1;
+        return err.SysErr.ErrNoFile;
     };
     cleanup_ip = true;
 
     ip.ilock();
     if (ip.readi(std.mem.asBytes(&elfh), 0, @sizeOf(elf.ElfHdr)) != @sizeOf(elf.ElfHdr)) {
-        return -1;
+        return err.SysErr.ErrIO;
     }
     if (elfh.magic != elf.ELF_MAGIC) {
-        return -1;
+        return err.SysErr.ErrNoExec;
     }
 
     pgdir = vm.setupkvm() orelse {
-        return -1;
+        return err.SysErr.ErrNoMem;
     };
     cleanup_pgdir = true;
 
@@ -56,27 +57,27 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
     var off = elfh.phoff;
     for (0..elfh.phnum) |_| {
         if (ip.readi(std.mem.asBytes(&ph), off, @sizeOf(elf.ProgHdr)) != @sizeOf(elf.ProgHdr)) {
-            return -1;
+            return err.SysErr.ErrIO;
         }
         if (ph.ty != elf.ELF_PROG_LOAD) {
             continue;
         }
         if (ph.memsz < ph.filesz) {
-            return -1;
+            return err.SysErr.ErrNoExec;
         }
         if (ph.vaddr + ph.memsz < ph.vaddr) {
-            return -1;
+            return err.SysErr.ErrNoExec;
         }
         sz = vm.allocuvm(pgdir, sz, ph.vaddr + ph.memsz);
         if (sz == 0) {
-            return -1;
+            return err.SysErr.ErrNoMem;
         }
         if (ph.vaddr % mmu.PGSIZE != 0) {
-            return -1;
+            return err.SysErr.ErrNoExec;
         }
         const loaded = vm.loaduvm(pgdir, ph.vaddr, ip, ph.off, ph.filesz);
         if (!loaded) {
-            return -1;
+            return err.SysErr.ErrFault;
         }
         off += @sizeOf(elf.ProgHdr);
     }
@@ -93,7 +94,7 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
     sz = mmu.pgroundup(sz);
     sz = vm.allocuvm(pgdir, sz, sz + 2 * mmu.PGSIZE);
     if (sz == 0) {
-        return -1;
+        return err.SysErr.ErrNoMem;
     }
     vm.clearpteu(pgdir, sz - 2 * mmu.PGSIZE);
 
@@ -109,13 +110,13 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
 
     const argc = argv.len;
     if (argc >= param.MAXARG) {
-        return -1;
+        return err.SysErr.ErrArgs;
     }
     for (0..argc) |i| {
         sp = (sp - (argv[i].len + 1)) & ~@as(usize, 3); // ensure args are 4-aligned in the stack
         const ok = vm.copyout(pgdir, sp, argv[i]);
         if (!ok) {
-            return -1;
+            return err.SysErr.ErrFault;
         }
         ustack[3 + i] = sp;
     }
@@ -129,7 +130,7 @@ pub fn exec(path: []const u8, argv: []const []const u8) i32 {
     const slice: []const u8 = std.mem.sliceAsBytes(ustack[0..(3 + argc + 1)]);
     const ok = vm.copyout(pgdir, sp, slice);
     if (!ok) {
-        return -1;
+        return err.SysErr.ErrFault;
     }
 
     // NOTE from now on exec can't fail, so we *MUST* clear the cleanup_pgdir flag.

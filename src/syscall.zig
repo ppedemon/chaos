@@ -1,4 +1,5 @@
 const console = @import("console.zig");
+const err = @import("err.zig");
 const proc = @import("proc.zig");
 const sysfile = @import("sysfile.zig");
 
@@ -24,14 +25,14 @@ const SYS_link = 19;
 const SYS_mkdir = 20;
 const SYS_close = 21;
 
-fn unimplemented() i32 {
+fn unimplemented() err.SysErr!u32 {
     const p: *proc.Proc = proc.myproc() orelse @panic("fetchint: no process");
     const n = p.tf.eax;
     console.cprintf("syscall not implemented: {}\n", .{n});
     @panic("syscall");
 }
 
-const syscalls = [_]*const fn () i32{
+const syscalls = [_]*const fn () err.SysErr!u32{
     unimplemented,
     unimplemented,
     unimplemented,
@@ -55,67 +56,71 @@ const syscalls = [_]*const fn () i32{
     unimplemented,
 };
 
+const ERROR = 0xFFFF_FFFF; // That us, -1 when interpreted as i32
+
 pub fn syscall() void {
     const currproc: *proc.Proc = proc.myproc() orelse @panic("syscall: no proc");
     const num = currproc.tf.eax;
     if (num > 0 and num < syscalls.len) {
-        currproc.tf.eax = @intCast(syscalls[num]());
+        if (syscalls[num]()) |result| {
+            currproc.tf.eax = result;
+        } else |syserr| {
+            console.cprintf("{} for syscall {}, setting eax = -1\n", .{syserr, num});
+            currproc.tf.eax = ERROR;
+        }
     } else {
         console.cprintf("{d} {s}: unknow syscall {d}\n", .{ currproc.pid, currproc.name, num });
-        currproc.tf.eax = 0xFFFF_FFFF; // That is, -1
+        currproc.tf.eax = ERROR;
     }
 }
 
-pub fn fetchint(addr: usize, ip: *i32) i32 {
+pub fn fetchint(addr: usize, ip: *u32) err.SysErr!void {
     const p: *proc.Proc = proc.myproc() orelse @panic("fetchint: no process");
-    if (addr >= p.sz or addr + @sizeOf(i32) > p.sz) {
-        return -1;
+    if (addr >= p.sz or addr + @sizeOf(u32) > p.sz) {
+        return err.SysErr.ErrFault;
     }
-    ip.* = @as(*i32, @ptrFromInt(addr)).*;
-    return 0;
+    ip.* = @as(*u32, @ptrFromInt(addr)).*;
 }
 
-pub fn fetchstr(addr: usize, pp: *[]const u8) i32 {
+pub fn fetchstr(addr: usize, pp: *[]const u8) err.SysErr!void {
     const p: *proc.Proc = proc.myproc() orelse @panic("fetchstr: no process");
     if (addr >= p.sz) {
-        return -1;
+        return err.SysErr.ErrFault;
     }
     const buf: [*]const u8 = @ptrFromInt(addr);
     for (0..p.sz) |i| {
         if (buf[i] == 0) {
             pp.* = buf[0..i];
-            return @as(i32, @intCast(i));
+            return;
         }
     }
-    return -1;
+    return err.SysErr.ErrFault;
 }
 
-pub fn argint(n: usize, ip: *i32) i32 {
+pub fn argint(n: usize, ip: *u32) err.SysErr!void {
     return fetchint(proc.myproc().?.tf.esp + @sizeOf(usize) + n * @sizeOf(usize), ip);
 }
 
-pub fn argptr(n: usize, pp: *[]const u8, size: usize) i32 {
+pub fn argptr(n: usize, pp: *[]const u8, size: usize) err.SysErr!void {
     const p: *proc.Proc = proc.myproc() orelse @panic("argptr: no process");
 
-    var i: i32 = undefined;
-    if (argint(n, &i) < 0) {
-        return -1;
-    }
+    var addr: u32 = undefined;
+    argint(n, &addr) catch |syserr| {
+        return syserr;
+    };
 
-    const addr: u32 = @intCast(i);
     if (size < 0 or addr > p.sz or addr + size > p.sz) {
-        return -1;
+        return err.SysErr.ErrFault;
     }
 
     const buf: [*]const u8 = @ptrFromInt(addr);
     pp.* = buf[0..size];
-    return 0;
 }
 
-pub fn argstr(n: usize, pp: *[]const u8) i32 {
-    var i: i32 = undefined;
-    if (argint(n, &i) < 0) {
-        return -1;
-    }
-    return fetchstr(@as(usize, @intCast(i)), pp);
+pub fn argstr(n: usize, pp: *[]const u8) err.SysErr!void {
+    var addr: u32 = undefined;
+    argint(n, &addr) catch |syserr| {
+        return syserr;
+    };
+    return fetchstr(@as(usize, @intCast(addr)), pp);
 }
