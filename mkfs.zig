@@ -102,15 +102,14 @@ pub fn main() !void {
     try iappend(root, &dbuf);
 
     for (2..args.len) |i| {
-        if (std.mem.indexOf(u8, args[i], "/")) |_| {
-            std.debug.print("Invalid file name: {s}\n", .{args[i]});
-            return error.BadArguments;
-        }
-
         const fd = try std.fs.cwd().openFile(args[i], .{});
         defer fd.close();
 
-        const name = if (args[i][0] == '_') args[i][1..] else args[i];
+        const filename = if (std.mem.lastIndexOf(u8, args[i], "/")) |pos|
+            args[i][pos + 1 ..]
+        else
+            args[i];
+        const name = if (filename[0] == '_') filename[1..] else filename;
         const inum = try ialloc(T_FILE);
 
         @memset(std.mem.asBytes(&de), 0);
@@ -243,16 +242,16 @@ fn iappend(inum: u32, data: []const u8) !void {
 }
 
 fn balloc(used: u32) !void {
-  std.debug.print("balloc: first {d} blocks allocated\n", .{used});
+    std.debug.print("balloc: first {d} blocks allocated\n", .{used});
 
-  // We really want the free bitmap to take at most a single block
-  std.debug.assert(used < fs.BSIZE * 8);
+    // We really want the free bitmap to take at most a single block
+    std.debug.assert(used < fs.BSIZE * 8);
 
-  @memset(&static.buf, 0);
-  for (0..used) |i| {
-    static.buf[i/8] = static.buf[i/8] | (@as(u8, 1) << @intCast(i % 8));
-  }
+    @memset(&static.buf, 0);
+    for (0..used) |i| {
+        static.buf[i / 8] = static.buf[i / 8] | (@as(u8, 1) << @intCast(i % 8));
+    }
 
-  std.debug.print("balloc: write free bitmap block at sector {d}\n", .{static.sb.bmap_start});
-  try wsect(static.sb.bmap_start, &static.buf);
+    std.debug.print("balloc: write free bitmap block at sector {d}\n", .{static.sb.bmap_start});
+    try wsect(static.sb.bmap_start, &static.buf);
 }

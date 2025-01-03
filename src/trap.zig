@@ -84,11 +84,6 @@ export fn trap(tf: *x86.TrapFrame) callconv(.C) void {
             proc.exit();
         }
         return;
-        // times +%= 1;
-        // if (times % 1_000_000 == 0) {
-        //     console.cputs("This should be exec, called form init code\n");
-        // }
-        // return;
     }
 
     switch (tf.trapno) {
