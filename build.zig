@@ -183,4 +183,11 @@ pub fn build(b: *std.Build) void {
 
     const run_step = b.step("run", "run the kernel on qemu");
     run_step.dependOn(&qemu_cmd.step);
+
+    // quick run variant: run kernel without making user progs not file system
+    const quick_qemu_cmd = b.addSystemCommand(&qemu_str);
+    quick_qemu_cmd.step.dependOn(b.getInstallStep());
+    
+    const quick_run_step = b.step("quickrun", "run the kernel on quemu (no user progs or fs built)");
+    quick_run_step.dependOn(&quick_qemu_cmd.step);
 }

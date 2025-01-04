@@ -45,6 +45,7 @@ export fn main() align(16) noreturn {
     ioapic.ioapicinit();
     console.consoleinit();
     uart.uartinit();
+    proc.pinit();
     trap.tvinit();
     bio.binit();
     ide.ideinit();

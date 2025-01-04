@@ -99,6 +99,16 @@ pub fn myproc() ?*Proc {
     return c.proc;
 }
 
+pub fn pinit() void {
+    for (&ptable.proc) |*proc| {
+        proc.state = .UNUSED;
+        proc.cwd = null;
+        for (0..proc.ofile.len) |fd| {
+            proc.ofile[fd] = null;
+        }
+    }
+}
+
 // allocproc: allocate a new process in ptable and setup its kstack.
 // kstack is setup such that it works when a process is created by fork or it's the 1st process.
 // For this, we want it to enter forkret, and then return to trapret. We need to:
@@ -302,7 +312,7 @@ pub fn exit() void {
         @panic("init exiting");
     }
 
-    for (0..param.NPROCFILE) |fd| {
+    for (0..currproc.ofile.len) |fd| {
         if (currproc.ofile[fd]) |f| {
             f.fclose();
             currproc.ofile[fd] = null;
