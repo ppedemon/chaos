@@ -5,8 +5,19 @@ const pipe = @import("pipe.zig");
 const spinlock = @import("spinlock.zig");
 const stat = @import("stat.zig");
 
+pub const O_RDONLY = 0x000;
+pub const O_WRONLY = 0x001;
+pub const O_RDWR = 0x002;
+pub const O_CREATE = 0x200;
+
+pub const FileType = enum {
+    FD_NONE,
+    FD_PIPE,
+    FD_INODE,
+};
+
 pub const File = struct {
-    ty: enum { FD_NONE, FD_PIPE, FD_INODE },
+    ty: FileType,
     ref: u32,
     readable: bool,
     writable: bool,

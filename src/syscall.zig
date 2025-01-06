@@ -2,7 +2,9 @@ const console = @import("console.zig");
 const err = @import("err.zig");
 const proc = @import("proc.zig");
 const sysfile = @import("sysfile.zig");
+const sysproc = @import("sysproc.zig");
 
+// TODO not going to be used? See if we can remove these constants in the future
 const SYS_fork = 1;
 const SYS_exit = 2;
 const SYS_wait = 3;
@@ -35,7 +37,7 @@ fn unimplemented() err.SysErr!u32 {
 const syscalls = [_]*const fn () err.SysErr!u32{
     unimplemented,
     unimplemented,
-    unimplemented,
+    sysproc.sys_exit,
     unimplemented,
     unimplemented,
     unimplemented,
@@ -48,6 +50,7 @@ const syscalls = [_]*const fn () err.SysErr!u32{
     unimplemented,
     unimplemented,
     unimplemented,
+    sysfile.sys_open,
     unimplemented,
     unimplemented,
     unimplemented,
@@ -105,10 +108,7 @@ pub fn argptr(n: usize, pp: *[]const u8, size: usize) err.SysErr!void {
     const p: *proc.Proc = proc.myproc() orelse @panic("argptr: no process");
 
     var addr: u32 = undefined;
-    argint(n, &addr) catch |syserr| {
-        return syserr;
-    };
-
+    try argint(n, &addr);
     if (size < 0 or addr > p.sz or addr + size > p.sz) {
         return err.SysErr.ErrFault;
     }
@@ -119,8 +119,6 @@ pub fn argptr(n: usize, pp: *[]const u8, size: usize) err.SysErr!void {
 
 pub fn argstr(n: usize, pp: *[]const u8) err.SysErr!void {
     var addr: u32 = undefined;
-    argint(n, &addr) catch |syserr| {
-        return syserr;
-    };
+    try argint(n, &addr);
     return fetchstr(@as(usize, @intCast(addr)), pp);
 }

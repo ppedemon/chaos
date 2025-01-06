@@ -40,7 +40,7 @@ pub fn dirlookup(dp: *fs.Inode, name: []const u8, poff_opt: ?*u32) ?*fs.Inode {
 }
 
 // Write a directory entry (name, inum) into the directory inode dp.
-// Returns true if the directory was linked, false4 if it already existed.
+// Returns true if the directory was linked, false if it already existed.
 pub fn dirlink(dp: *fs.Inode, name: []const u8, inum: u32) bool {
     if (dirlookup(dp, name, null)) |ip| {
         ip.iput();
@@ -102,10 +102,6 @@ fn skipelem(path: []const u8, name: []u8) ?[]const u8 {
 // slice after calling this function in parent mode. Do it like this:
 //
 //    const right_name = string.safeslice(@as([:0]u8, @ptrCast(&name)))
-//
-//  or, alternatively:
-//
-//    const right_name = std.mem.slice(@as([:0]u8, @ptrCast(&name)))
 //
 fn namex(path: []const u8, stop_at_parent: bool, name: []u8) ?*fs.Inode {
     var ip: *fs.Inode = undefined;
