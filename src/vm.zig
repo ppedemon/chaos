@@ -342,3 +342,32 @@ pub fn copyout(pgdir: [*]mmu.PdEntry, va: usize, p: []const u8) bool {
 
     return true;
 }
+
+pub fn copyuvm(pgdir: [*]mmu.PdEntry, sz: usize) ?[*]mmu.PdEntry {
+    const d = setupkvm() orelse return null;
+
+    var i: usize = 0;
+    while (i < sz) : (i += mmu.PGSIZE) {
+        const pte: *mmu.PtEntry = walkpgdir(pgdir, i, false) orelse {
+            @panic("copyuvm: pte should exist");
+        };
+        if (pte.* & mmu.PTE_P == 0) {
+            @panic("copyuvm: page not present");
+        }
+        const pa = mmu.pteaddr(pte.*);
+        const flags = mmu.pteflags(pte.*);
+        const va: usize = kalloc.kalloc() orelse {
+            freevm(d);
+            return null;
+        };
+        string.memmove(va, memlayout.p2v(pa), mmu.PGSIZE);
+        const ok = mappages(d, i, mmu.PGSIZE, memlayout.v2p(va), flags);
+        if (!ok) {
+            kalloc.kfree(va);
+            freevm(d);
+            return null;
+        }
+    }
+
+    return d;
+}

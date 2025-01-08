@@ -36,9 +36,9 @@ fn unimplemented() err.SysErr!u32 {
 
 const syscalls = [_]*const fn () err.SysErr!u32{
     unimplemented,
-    unimplemented,
+    sysproc.sys_fork,
     sysproc.sys_exit,
-    unimplemented,
+    sysproc.sys_wait,
     unimplemented,
     unimplemented,
     unimplemented,

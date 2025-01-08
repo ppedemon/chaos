@@ -262,74 +262,14 @@ pub fn main() !void {
 
     // exec("/initcode", argv);
 
-    const tuple = .{ 42, "hi", 3.1416 };
-    std.debug.print("len = {}\n", .{tuple.len});
-    std.debug.print("first = {}\n", .{tuple[0]});
-    std.debug.print("second = {s}\n", .{tuple[1]});
-    std.debug.print("third = {}\n", .{tuple[2]});
-    std.debug.print("{}\n", .{@sizeOf([512]u8)});
-    std.debug.print("{{ }}\n", .{});
-    putint(-1, true, 10);
-    putint(@as(u32, 24), false, 16);
-    put(-1);
-    put(@as(i32, 1));
-    put(@as(u16, 0xff));
-    put("hola");
-    put(@as([]const u8, "hi"));
-    put('c');
-
-    var area: [16]u8 = undefined;
-    @memset(&area, 0);
-    @memcpy(area[0..3],"str");
-    put(@as([*:0]u8, @ptrCast(&area)));
+    var src: [3:0]u8 = undefined;
+    var dst: [3:0]u8 = undefined;
+    @memset(&src, 0);
+    @memcpy(&src, "abc");
+    string.safecpy(&dst, &src);
+    std.debug.print("Result = {s}\n", .{dst});
 }
 
-pub fn put(x: anytype) void {
-    const info = @typeInfo(@TypeOf(x));
-    switch(info) {
-        .Int, .ComptimeInt => std.debug.print("int: {x} -- {}\n", .{x, info}),
-        .Pointer => |pi| {
-            switch(pi.size) {
-                .One => switch(@typeInfo(pi.child)) {
-                    .Array => put(x.*),
-                    else => std.debug.print("pointer: {p}\n", .{x}),
-                },
-                .Many, .C => if (pi.sentinel) |_| {
-                    put(std.mem.span(x));
-                } else {
-                    std.debug.print("many pointer: {x}\n", .{@intFromPtr(x)});
-                },
-                .Slice => if (pi.child == u8) {
-                    std.debug.print("slice strig: {s}\n", .{x});
-                } else {
-                    std.debug.print("slice: {}\n", .{x});
-                },
-            }
-        },
-        .Array => |a| if (a.child == u8) {
-            std.debug.print("array string: {s}\n", .{x});
-        } else {
-            std.debug.print("array: {}\n", .{x});
-        },
-        else => std.debug.print("Another: {}\n", .{info}),
-    }
-}
-
-pub fn putint(n: anytype, _: bool, _: u32) void {
-    // const static = struct {
-    //     const digits = "0123456789ABCDEF";
-    // };
-
-    //const neg  = sign and n < 0;
-    const x: u32 = @abs(n);
-
-    switch (@typeInfo(@TypeOf(n))) {
-        .Int, .ComptimeInt => {
-            std.debug.print("x = {}\n", .{x});
-        },
-        else => @compileError("invalid integer type"),
-    }
-}
 
 fn exec(path: [*:0]const u8, argv: [*]?[*:0]const u8) void {
     var i: usize = 0;

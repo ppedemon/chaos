@@ -306,6 +306,79 @@ pub fn wakeup(chan: usize) void {
     wakeup1(chan);
 }
 
+pub fn fork() ?u32 {
+    const curproc: *Proc = myproc() orelse @panic("fork: no process");
+    const newproc: *Proc = allocproc() orelse return null;
+
+    if (vm.copyuvm(curproc.pgdir, curproc.sz)) |pgdir| {
+        newproc.pgdir = pgdir;
+        newproc.sz = curproc.sz;
+        newproc.parent = curproc;
+        newproc.tf.* = curproc.tf.*;
+        newproc.tf.eax = 0; // fork shall return 0 in the child
+
+        for (0..param.NPROCFILE) |fd| {
+            if (curproc.ofile[fd]) |f| {
+                newproc.ofile[fd] = f.fdup();
+            }
+        }
+
+        newproc.cwd = curproc.cwd.?.idup();
+        string.safecpy(&newproc.name, &curproc.name);
+
+        const pid = newproc.pid;
+
+        ptable.lock.acquire();
+        newproc.state = .RUNNABLE;
+        ptable.lock.release();
+
+        return pid; // fork shall return child pid in parent
+    } else {
+        kalloc.kfree(newproc.kstack);
+        newproc.kstack = 0;
+        newproc.state = .UNUSED;
+        return null;
+    }
+}
+
+pub fn wait() ?u32 {
+    const curproc: *Proc = myproc() orelse @panic("wait: no process");
+
+    ptable.lock.acquire();
+    defer ptable.lock.release();
+
+    while (true) {
+        var haschildren = false;
+
+        for (&ptable.proc) |*p| {
+            if (p.parent != curproc) {
+                continue;
+            }
+            haschildren = true;
+            if (p.state == .ZOMBIE) {
+                const pid = p.pid;
+                
+                kalloc.kfree(p.kstack);
+                p.kstack = 0;
+                vm.freevm(p.pgdir);
+                p.pid = 0;
+                p.parent = null;
+                @memset(&p.name, 0);
+                p.killed = false;
+                p.state = .UNUSED;
+
+                return pid;
+            }
+        }
+
+        if (!haschildren or curproc.killed) {
+            return null;
+        }
+
+        sleep(@intFromPtr(curproc), &ptable.lock);
+    }
+}
+
 pub fn exit() void {
     const currproc: *Proc = myproc() orelse @panic("exit: no process");
     if (currproc == initproc) {

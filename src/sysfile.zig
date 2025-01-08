@@ -113,10 +113,10 @@ pub fn sys_exec() err.SysErr!u32 {
 
     const exec_argv: []const []const u8 = argv[0..i];
 
-    console.cprintf("path = {s}\n", .{path});
-    for (exec_argv, 0..) |arg, j| {
-        console.cprintf("argv[{}] = {s}\n", .{ j, arg });
-    }
+    // console.cprintf("path = {s}\n", .{path});
+    // for (exec_argv, 0..) |arg, j| {
+    //     console.cprintf("argv[{}] = {s}\n", .{ j, arg });
+    // }
 
     return exec.exec(path, exec_argv);
 }
@@ -196,8 +196,6 @@ pub fn sys_mknod() err.SysErr!u32 {
     try syscall.argstr(0, &path);
     try syscall.argint(1, &major);
     try syscall.argint(2, &minor);
-
-    console.cprintf("mknod: path = {s}, major = {}, minor = {}\n", .{ path, major, minor });
 
     log.begin_op();
     defer log.end_op();

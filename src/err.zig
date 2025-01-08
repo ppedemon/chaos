@@ -1,5 +1,6 @@
 pub const SysErr = error{
     ErrFault, // Page fsul, user process tried to read outisde its addr space
+    ErrChild, // No child to wait for
     ErrIO, // IO error reading/writing to ide disk
     ErrBadFd, // Invalid file handle
     ErrInval, // Invalid agr combination. For example, opening a folder with eec permissions.
