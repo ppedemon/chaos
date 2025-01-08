@@ -98,7 +98,7 @@ pub const Pipe = struct {
             self.nwrite += 1;
         }
 
-        proc.wakeup(&self.nread);
+        proc.wakeup(@intFromPtr(&self.nread));
         return n;
     }
 

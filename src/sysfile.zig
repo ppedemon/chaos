@@ -13,8 +13,24 @@ const syscall = @import("syscall.zig");
 
 const std = @import("std");
 
+fn argfd(n: usize, pfd: ?*u32, pf: ?**file.File) err.SysErr!void {
+    const currproc: *proc.Proc = proc.myproc() orelse @panic("argfd: no process");
+
+    var fd: u32 = undefined;
+    try syscall.argint(n, &fd);
+    if (fd < 0 or fd >= param.NPROCFILE or currproc.ofile[fd] == null) {
+        return err.SysErr.ErrBadFd;
+    }
+    if (pfd) |p| {
+        p.* = fd;
+    }
+    if (pf) |p| {
+        p.* = currproc.ofile[fd].?;
+    }
+}
+
 fn fdalloc(f: *file.File) err.SysErr!usize {
-    const currproc: *proc.Proc = proc.myproc() orelse @panic("fdalloc: no current process");
+    const currproc: *proc.Proc = proc.myproc() orelse @panic("fdalloc: no process");
     for (0..currproc.ofile.len) |fd| {
         if (currproc.ofile[fd] == null) {
             currproc.ofile[fd] = f;
@@ -72,51 +88,6 @@ fn create(path: []const u8, ty: u16, major: u16, minor: u16) err.SysErr!*fs.Inod
     return err.SysErr.ErrNoEnt;
 }
 
-pub fn sys_open() err.SysErr!u32 {
-    var path: []const u8 = undefined;
-    try syscall.argstr(0, &path);
-
-    var omode: u32 = undefined;
-    try syscall.argint(1, &omode);
-
-    var ip: *fs.Inode = undefined;
-
-    log.begin_op();
-    defer log.end_op();
-
-    if (omode & file.O_CREATE != 0) {
-        ip = try create(path, stat.T_FILE, 0, 0);
-    } else {
-        if (dir.namei(path)) |result| {
-            console.cputs(">>> HERE\n");
-            ip = result;
-        } else {
-            return err.SysErr.ErrNoEnt;
-        }
-        ip.ilock();
-        if (ip.ty == stat.T_DIR and omode != file.O_RDONLY) {
-            ip.iunlockput();
-            return err.SysErr.ErrInval;
-        }
-    }
-
-    if (file.File.falloc()) |f| {
-        defer ip.iunlockput();
-        errdefer f.fclose();
-        const fd = try fdalloc(f);
-        f.ty = file.FileType.FD_INODE;
-        f.inode = ip;
-        f.off = 0;
-        f.readable = (omode & file.O_WRONLY) == 0;
-        f.writable = (omode & file.O_WRONLY) != 0 or (omode & file.O_RDWR) != 0;
-        console.cprintf("All good, returning file handler {}\n", .{fd});
-        return fd;
-    } else {
-        ip.iunlockput();
-        return err.SysErr.ErrMaxOpen;
-    }
-}
-
 pub fn sys_exec() err.SysErr!u32 {
     var path: []const u8 = undefined;
     var argv: [param.MAXARG][]const u8 = undefined;
@@ -148,4 +119,95 @@ pub fn sys_exec() err.SysErr!u32 {
     }
 
     return exec.exec(path, exec_argv);
+}
+
+pub fn sys_dup() err.SysErr!u32 {
+    var f: *file.File = undefined;
+    try argfd(0, null, &f);
+
+    const fd = try fdalloc(f);
+    _ = f.fdup();
+    return fd;
+}
+
+pub fn sys_open() err.SysErr!u32 {
+    var path: []const u8 = undefined;
+    try syscall.argstr(0, &path);
+
+    var omode: u32 = undefined;
+    try syscall.argint(1, &omode);
+
+    var ip: *fs.Inode = undefined;
+
+    log.begin_op();
+    defer log.end_op();
+
+    if (omode & file.O_CREATE != 0) {
+        ip = try create(path, stat.T_FILE, 0, 0);
+    } else {
+        if (dir.namei(path)) |result| {
+            ip = result;
+        } else {
+            return err.SysErr.ErrNoEnt;
+        }
+        ip.ilock();
+        if (ip.ty == stat.T_DIR and omode != file.O_RDONLY) {
+            ip.iunlockput();
+            return err.SysErr.ErrInval;
+        }
+    }
+
+    if (file.File.falloc()) |f| {
+        errdefer {
+            f.fclose();
+            ip.iunlockput();
+        }
+        const fd = try fdalloc(f);
+        f.ty = file.FileType.FD_INODE;
+        f.inode = ip;
+        f.off = 0;
+        f.readable = (omode & file.O_WRONLY) == 0;
+        f.writable = (omode & file.O_WRONLY) != 0 or (omode & file.O_RDWR) != 0;
+        ip.iunlock();
+        return fd;
+    } else {
+        ip.iunlockput();
+        return err.SysErr.ErrMaxOpen;
+    }
+}
+
+pub fn sys_write() err.SysErr!u32 {
+    var n: u32 = undefined;
+    var f: *file.File = undefined;
+    var buf: []const u8 = undefined;
+
+    try argfd(0, null, &f);
+    try syscall.argint(2, &n);
+    try syscall.argptr(1, &buf, n);
+    
+    return if (f.fwrite(buf, n)) |nwritten| nwritten else err.SysErr.ErrIO;
+}
+
+pub fn sys_mknod() err.SysErr!u32 {
+    var path: []u8 = undefined;
+    var major: u32 = undefined;
+    var minor: u32 = undefined;
+
+    try syscall.argstr(0, &path);
+    try syscall.argint(1, &major);
+    try syscall.argint(2, &minor);
+
+    console.cprintf("mknod: path = {s}, major = {}, minor = {}\n", .{ path, major, minor });
+
+    log.begin_op();
+    defer log.end_op();
+
+    const ip = try create(
+        path,
+        stat.T_DEV,
+        @as(u16, @intCast(major)),
+        @as(u16, @intCast(minor)),
+    );
+    ip.iunlockput();
+    return 0;
 }

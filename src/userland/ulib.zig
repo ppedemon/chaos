@@ -4,7 +4,7 @@ comptime {
         \\ exit:
         \\  movl $2, %eax
         \\  int $64
-        \\  ret 
+        \\  ret
     );
 
     asm (
@@ -12,7 +12,15 @@ comptime {
         \\ exec:
         \\  movl $7, %eax
         \\  int $64
-        \\  ret 
+        \\  ret
+    );
+
+    asm (
+        \\ .global dup
+        \\ dup:
+        \\  movl $10, %eax
+        \\  int $64
+        \\  ret
     );
 
     asm (
@@ -20,7 +28,23 @@ comptime {
         \\ open:
         \\  movl $15, %eax
         \\  int $64
-        \\  ret 
+        \\  ret
+    );
+
+    asm (
+        \\ .global write
+        \\ write:
+        \\  movl $16, %eax
+        \\  int $64
+        \\  ret
+    );
+
+    asm (
+        \\ .global mknod
+        \\ mknod:
+        \\  movl $17, %eax
+        \\  int $64
+        \\  ret
     );
 }
 
@@ -31,4 +55,7 @@ pub const O_CREATE = 0x200;
 
 pub extern fn exit() callconv(.C) noreturn;
 pub extern fn exec(path: [*:0]const u8, argv: [*]?[*:0]const u8) callconv(.C) i32;
+pub extern fn dup(fd: u32) callconv(.C) i32;
 pub extern fn open(path: [*:0]const u8, omode: u32) callconv(.C) i32;
+pub extern fn write(fd: u32, buf: [*]const u8, n: u32) callconv(.C) i32;
+pub extern fn mknod(path: [*:0]const u8, major: u32, minor: u32) callconv(.C) i32;

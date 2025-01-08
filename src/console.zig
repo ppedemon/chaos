@@ -1,5 +1,4 @@
 const std = @import("std");
-const fmt = @import("std").fmt;
 
 const file = @import("file.zig");
 const fs = @import("fs.zig");
@@ -54,7 +53,7 @@ pub fn cprintf(comptime format: []const u8, args: anytype) void {
     var buf: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(buf[0..]);
     const allocator = fba.allocator();
-    const s = fmt.allocPrint(allocator, format, args) catch "error";
+    const s = std.fmt.allocPrint(allocator, format, args) catch "error";
     cputs(s);
 }
 
