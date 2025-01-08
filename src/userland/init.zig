@@ -1,5 +1,4 @@
 const ulib = @import("ulib.zig");
-const print = @import("print.zig");
 
 export fn main() callconv(.C) void {
     if (ulib.open("console", ulib.O_RDWR) < 0) {
