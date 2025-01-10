@@ -40,11 +40,11 @@ const syscalls = [_]*const fn () err.SysErr!u32{
     sysproc.sys_exit,
     sysproc.sys_wait,
     unimplemented,
-    unimplemented,
+    sysfile.sys_read,
     unimplemented,
     sysfile.sys_exec,
     unimplemented,
-    unimplemented,
+    sysfile.sys_chdir,
     sysfile.sys_dup,
     unimplemented,
     unimplemented,
@@ -56,24 +56,24 @@ const syscalls = [_]*const fn () err.SysErr!u32{
     unimplemented,
     unimplemented,
     unimplemented,
-    unimplemented,
+    sysfile.sys_close,
 };
 
 const ERROR = 0xFFFF_FFFF; // That iss, -1 when interpreted as a signed integer
 
 pub fn syscall() void {
-    const currproc: *proc.Proc = proc.myproc() orelse @panic("syscall: no proc");
-    const num = currproc.tf.eax;
+    const curproc: *proc.Proc = proc.myproc() orelse @panic("syscall: no proc");
+    const num = curproc.tf.eax;
     if (num > 0 and num < syscalls.len) {
         if (syscalls[num]()) |result| {
-            currproc.tf.eax = result;
+            curproc.tf.eax = result;
         } else |syserr| {
             console.cprintf("{} for syscall {}, setting eax = -1\n", .{ syserr, num });
-            currproc.tf.eax = ERROR;
+            curproc.tf.eax = ERROR;
         }
     } else {
-        console.cprintf("{d} {s}: unknow syscall {d}\n", .{ currproc.pid, currproc.name, num });
-        currproc.tf.eax = ERROR;
+        console.cprintf("{d} {s}: unknow syscall {d}\n", .{ curproc.pid, curproc.name, num });
+        curproc.tf.eax = ERROR;
     }
 }
 

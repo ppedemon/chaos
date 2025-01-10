@@ -2,11 +2,7 @@ const ulib = @import("ulib.zig");
 
 var shargv = [_]?[*:0]const u8{ "/sh", null };
 
-export fn main(argc: u32, argv: [*][*:0]const u8) callconv(.C) void {
-    for (0..argc) |i| {
-        ulib.print("args[{}] = {s}\n", .{ i, argv[i] });
-    }
-
+export fn main() callconv(.C) void {
     // const pid = ulib.fork();
     // if (pid < 0) {
     //     ulib.puts("init: fork failed\n");
@@ -30,9 +26,9 @@ export fn main(argc: u32, argv: [*][*:0]const u8) callconv(.C) void {
     //     }
     // }
 
-    ulib.puts("init: starting sh\n");
-
     while (true) {
+        ulib.puts("init: starting sh\n");
+
         const pid = ulib.fork();
         if (pid < 0) {
             ulib.fputs(ulib.stderr, "init: fork failed\n");

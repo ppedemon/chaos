@@ -24,9 +24,25 @@ comptime {
     );
 
     asm (
+        \\ .global read
+        \\ read:
+        \\  movl $5, %eax
+        \\  int $64
+        \\  ret
+    );
+
+    asm (
         \\ .global exec
         \\ exec:
         \\  movl $7, %eax
+        \\  int $64
+        \\  ret
+    );
+
+    asm (
+        \\ .global chdir
+        \\ chdir:
+        \\  movl $9, %eax
         \\  int $64
         \\  ret
     );
@@ -62,6 +78,14 @@ comptime {
         \\  int $64
         \\  ret
     );
+
+    asm (
+        \\ .global close
+        \\ close:
+        \\  movl $21, %eax
+        \\  int $64
+        \\  ret
+    );
 }
 
 pub const O_RDONLY = 0x000;
@@ -72,11 +96,14 @@ pub const O_CREATE = 0x200;
 pub extern fn fork() callconv(.C) i32;
 pub extern fn exit() callconv(.C) noreturn;
 pub extern fn wait() callconv(.C) i32;
+pub extern fn read(fd: u32, buf: [*]u8, n: u32) callconv(.C) i32;
 pub extern fn exec(path: [*:0]const u8, argv: [*]const ?[*:0]const u8) callconv(.C) i32;
+pub extern fn chdir(path: [*:0]const u8) callconv(.C) i32;
 pub extern fn dup(fd: u32) callconv(.C) i32;
 pub extern fn open(path: [*:0]const u8, omode: u32) callconv(.C) i32;
 pub extern fn write(fd: u32, buf: [*]const u8, n: u32) callconv(.C) i32;
 pub extern fn mknod(path: [*:0]const u8, major: u32, minor: u32) callconv(.C) i32;
+pub extern fn close(fd: u32) callconv(.C) i32;
 
 const std = @import("std");
 
@@ -121,4 +148,21 @@ pub fn fprint(fd: u32, comptime format: []const u8, args: anytype) void {
 
 pub inline fn print(comptime format: []const u8, args: anytype) void {
     fprint(stdout, format, args);
+}
+
+pub fn gets(buf: []u8) []u8 {
+    var n: usize = 0;
+    var c: u8 = undefined;
+    for (0..buf.len) |i| {
+        const res = read(stdin, @ptrCast(&c), 1);
+        if (res < 1) {
+            return buf[0..0];
+        }
+        n += 1;
+        buf[i] = c;
+        if (c == '\n' or c == '\r') {
+            break;
+        }
+    }
+    return buf[0..n];
 }

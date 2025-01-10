@@ -14,26 +14,26 @@ const syscall = @import("syscall.zig");
 const std = @import("std");
 
 fn argfd(n: usize, pfd: ?*u32, pf: ?**file.File) err.SysErr!void {
-    const currproc: *proc.Proc = proc.myproc() orelse @panic("argfd: no process");
+    const curproc: *proc.Proc = proc.myproc() orelse @panic("argfd: no process");
 
     var fd: u32 = undefined;
     try syscall.argint(n, &fd);
-    if (fd < 0 or fd >= param.NPROCFILE or currproc.ofile[fd] == null) {
+    if (fd < 0 or fd >= param.NPROCFILE or curproc.ofile[fd] == null) {
         return err.SysErr.ErrBadFd;
     }
     if (pfd) |p| {
         p.* = fd;
     }
     if (pf) |p| {
-        p.* = currproc.ofile[fd].?;
+        p.* = curproc.ofile[fd].?;
     }
 }
 
 fn fdalloc(f: *file.File) err.SysErr!usize {
-    const currproc: *proc.Proc = proc.myproc() orelse @panic("fdalloc: no process");
-    for (0..currproc.ofile.len) |fd| {
-        if (currproc.ofile[fd] == null) {
-            currproc.ofile[fd] = f;
+    const curproc: *proc.Proc = proc.myproc() orelse @panic("fdalloc: no process");
+    for (0..curproc.ofile.len) |fd| {
+        if (curproc.ofile[fd] == null) {
+            curproc.ofile[fd] = f;
             return fd;
         }
     }
@@ -88,6 +88,18 @@ fn create(path: []const u8, ty: u16, major: u16, minor: u16) err.SysErr!*fs.Inod
     return err.SysErr.ErrNoEnt;
 }
 
+pub fn sys_read() err.SysErr!u32 {
+    var n: u32 = undefined;
+    var f: *file.File = undefined;
+    var buf: []u8 = undefined;
+
+    try argfd(0, null, &f);
+    try syscall.argint(2, &n);
+    try syscall.argptr(1, &buf, n);
+
+    return if (f.fread(buf, n)) |nr| nr else err.SysErr.ErrIO;
+}
+
 pub fn sys_exec() err.SysErr!u32 {
     var path: []const u8 = undefined;
     var argv: [param.MAXARG][]const u8 = undefined;
@@ -112,13 +124,31 @@ pub fn sys_exec() err.SysErr!u32 {
     }
 
     const exec_argv: []const []const u8 = argv[0..i];
-
-    // console.cprintf("path = {s}\n", .{path});
-    // for (exec_argv, 0..) |arg, j| {
-    //     console.cprintf("argv[{}] = {s}\n", .{ j, arg });
-    // }
-
     return exec.exec(path, exec_argv);
+}
+
+pub fn sys_chdir() err.SysErr!u32 {
+    const curproc: *proc.Proc = proc.myproc() orelse @panic("chdir: no process");
+
+    log.begin_op();
+    defer log.end_op();
+
+    var path: []const u8 = undefined;
+    try syscall.argstr(0, &path);
+
+    const ip: *fs.Inode = dir.namei(path) orelse {
+        return err.SysErr.ErrNoEnt;
+    };
+
+    ip.ilock();
+    if (ip.ty != stat.T_DIR) {
+        ip.iunlockput();
+        return err.SysErr.ErrNotDir;
+    }
+    ip.iunlock();
+    curproc.cwd.?.iput();
+    curproc.cwd = ip;
+    return 0;
 }
 
 pub fn sys_dup() err.SysErr!u32 {
@@ -184,8 +214,8 @@ pub fn sys_write() err.SysErr!u32 {
     try argfd(0, null, &f);
     try syscall.argint(2, &n);
     try syscall.argptr(1, &buf, n);
-    
-    return if (f.fwrite(buf, n)) |nwritten| nwritten else err.SysErr.ErrIO;
+
+    return if (f.fwrite(buf, n)) |nw| nw else err.SysErr.ErrIO;
 }
 
 pub fn sys_mknod() err.SysErr!u32 {
@@ -208,4 +238,16 @@ pub fn sys_mknod() err.SysErr!u32 {
     );
     ip.iunlockput();
     return 0;
+}
+
+pub fn sys_close() err.SysErr!u32 {
+    var fd: u32 = undefined;
+    var f: *file.File = undefined;
+    try argfd(0, &fd, &f);
+    if (proc.myproc()) |p| {
+        p.ofile[fd] = null;
+        f.fclose();
+        return 0;
+    }
+    @panic("close: no process");
 }

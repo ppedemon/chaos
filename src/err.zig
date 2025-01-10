@@ -4,6 +4,7 @@ pub const SysErr = error{
     ErrIO, // IO error reading/writing to ide disk
     ErrBadFd, // Invalid file handle
     ErrInval, // Invalid agr combination. For example, opening a folder with eec permissions.
+    ErrNotDir, // Path isn't a directory
     ErrNoExec, // File is not a valid ELF executable
     ErrNoFile, // File to execute not found
     ErrNoMem, // Not enough memory to handle syscall

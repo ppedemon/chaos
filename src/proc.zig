@@ -380,33 +380,33 @@ pub fn wait() ?u32 {
 }
 
 pub fn exit() void {
-    const currproc: *Proc = myproc() orelse @panic("exit: no process");
-    if (currproc == initproc) {
+    const curproc: *Proc = myproc() orelse @panic("exit: no process");
+    if (curproc == initproc) {
         @panic("init exiting");
     }
 
-    for (0..currproc.ofile.len) |fd| {
-        if (currproc.ofile[fd]) |f| {
+    for (0..curproc.ofile.len) |fd| {
+        if (curproc.ofile[fd]) |f| {
             f.fclose();
-            currproc.ofile[fd] = null;
+            curproc.ofile[fd] = null;
         }
     }
 
-    if (currproc.cwd) |ip| {
+    if (curproc.cwd) |ip| {
         log.begin_op();
         ip.iput();
-        currproc.cwd = null;
+        curproc.cwd = null;
         log.end_op();
     }
 
     ptable.lock.acquire();
 
-    if (currproc.parent) |parent| {
+    if (curproc.parent) |parent| {
         wakeup1(@intFromPtr(parent));
     }
     for (&ptable.proc) |*p| {
         if (p.parent) |parent| {
-            if (parent == currproc) {
+            if (parent == curproc) {
                 p.parent = initproc;
                 if (p.state == .ZOMBIE) {
                     wakeup1(@intFromPtr(initproc));
@@ -415,7 +415,7 @@ pub fn exit() void {
         }
     }
 
-    currproc.state = .ZOMBIE;
+    curproc.state = .ZOMBIE;
     sched();
     @panic("zombie exit");
 }

@@ -74,13 +74,13 @@ pub fn idtinit() void {
 
 export fn trap(tf: *x86.TrapFrame) callconv(.C) void {
     if (tf.trapno == T_SYSCALL) {
-        const currproc: *proc.Proc = proc.myproc() orelse @panic("trap: no proc for syscall");
-        if (currproc.killed) {
+        const curproc: *proc.Proc = proc.myproc() orelse @panic("trap: no proc for syscall");
+        if (curproc.killed) {
             proc.exit();
         }
-        currproc.tf = tf;
+        curproc.tf = tf;
         syscall.syscall();
-        if (currproc.killed) {
+        if (curproc.killed) {
             proc.exit();
         }
         return;

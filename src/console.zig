@@ -45,7 +45,7 @@ pub fn cputs(msg: []const u8) void {
 }
 
 pub fn cprintf(comptime format: []const u8, args: anytype) void {
-    if (cons.locking) {
+    if (cons.locking and !cons.lock.holding()) {
         cons.lock.acquire();
         defer cons.lock.release();
     }
@@ -66,7 +66,7 @@ pub fn panic(msg: []const u8) noreturn {
     }
 
     x86.cli();
-    cons.locking = false; //true;
+    cons.locking = true;
 
     cprintf("lapic id {d} panic: ", .{lapic.lapicid()});
     cprintf("{s}", .{msg});
@@ -255,7 +255,7 @@ pub fn consoleinit() void {
 }
 
 // -----------------------------------------------------------------------
-// Legacy form now on, eventually deprecate
+// Legacy from now on, eventually deprecate
 // -----------------------------------------------------------------------
 // const VGA_WIDTH = 80;
 // const VGA_HEIGHT = 25;
