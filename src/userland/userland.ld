@@ -5,8 +5,8 @@ ENTRY(_start)
 SECTIONS
 {
     . = 0;
-
-    .text : ALIGN(0x1000) {
+    
+    .text : AT(0) {
         *(.text)
     }
 
@@ -19,7 +19,7 @@ SECTIONS
     }
 
     .rodata : ALIGN(0x1000) {
-        *(.rodata)
+       *(.rodata .rodata.*)
     }
 
     /DISCARD/ : {

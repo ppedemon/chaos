@@ -1,48 +1,53 @@
 const ulib = @import("ulib.zig");
-const print = @import("print.zig");
 
-const argv: [*]?[*:0]const u8 = @constCast(@ptrCast(&[_]?[*:0]const u8{ "sh", null }));
+var shargv = [_]?[*:0]const u8{ "/sh", null };
 
-export fn main() callconv(.C) void {
-    if (ulib.open("console", ulib.O_RDWR) < 0) {
-        // Create an inode for device major 1 (that is, console)
-        if (ulib.mknod("console", 1, 1) < 0) {
-            return;
-        }
-        if (ulib.open("console", ulib.O_RDWR) < 0) {
-            return;
-        }
+export fn main(argc: u32, argv: [*][*:0]const u8) callconv(.C) void {
+    for (0..argc) |i| {
+        ulib.print("args[{}] = {s}\n", .{ i, argv[i] });
     }
 
-    const stdout: u32 = @intCast(ulib.dup(0));
-    _ = ulib.dup(0); // stderr, not used for now
+    // const pid = ulib.fork();
+    // if (pid < 0) {
+    //     ulib.puts("init: fork failed\n");
+    //     ulib.exit();
+    // }
+    // if (pid == 0) {
+    //     var i: u32 = 0;
+    //     while (true) {
+    //         if (i % 10_000_000 == 0) {
+    //             ulib.puts("Child\n");
+    //         }
+    //         i +%= 1;
+    //     }
+    // } else {
+    //     var i: u32 = 0;
+    //     while (true) {
+    //         if (i % 10_000_000 == 0) {
+    //             ulib.puts("Parent\n");
+    //         }
+    //         i +%= 1;
+    //     }
+    // }
 
-    var printer = print.Printer.init(stdout);
+    ulib.puts("init: starting sh\n");
 
     while (true) {
-        printer.put("init: starting sh\n").flush();
         const pid = ulib.fork();
         if (pid < 0) {
-            printer.put("init: fork failed\n").flush();
+            ulib.fputs(ulib.stderr, "init: fork failed\n");
             ulib.exit();
         }
         if (pid == 0) {
-            if (ulib.exec("./sh", argv) < 0) {
-                printer.putall("init: exec sh failed\n").flush();
+            if (ulib.exec("./sh", &shargv) < 0) {
+                ulib.fputs(ulib.stderr, "init: exec sh failed\n");
             }
             ulib.exit();
         }
         var wpid = ulib.wait();
         while (wpid >= 0 and wpid != pid) {
-            printer.putall("zombie!\n").flush(); // A process other than sh finished
+            ulib.fputs(ulib.stderr, "zombie!\n"); // A process other than sh finished
             wpid = ulib.wait();
         }
     }
-
-    // const argv: [*]?[*:0]const u8 = @constCast(@ptrCast(&[_]?[*:0]const u8{
-    //     "first",
-    //     "second",
-    //     "third",
-    //     null,
-    // }));
 }

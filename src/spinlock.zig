@@ -1,3 +1,4 @@
+const console = @import("console.zig");
 const memlayout = @import("memlayout.zig");
 const mmu = @import("mmu.zig");
 const proc = @import("proc.zig");
@@ -30,7 +31,7 @@ pub const SpinLock = struct {
         }
 
         //while (x86.xchg(&self.locked, 1) != 0) {}
-        while(@cmpxchgWeak(u32, &self.locked, 0, 1, .seq_cst, .seq_cst)) |_| {}
+        while (@cmpxchgWeak(u32, &self.locked, 0, 1, .seq_cst, .seq_cst)) |_| {}
 
         self.cpu = proc.mycpu();
         getpcs(self.pcs[0..]);
@@ -95,8 +96,9 @@ pub fn getpcs(pcs: []usize) void {
 
     // 0xFFFF_FFFF is a sentinel ebp value denoting the bottom of the kernel stack.
     // See start() in entry.zig
-    while (ebp != 0 and ebp != 0xFFFF_FFFF and i < pcs.len) : (i += 1) {
+    while (ebp >= memlayout.KERNBASE and ebp != 0xFFFF_FFFF and i < pcs.len) : (i += 1) {
         const p: [*]const usize = @ptrFromInt(ebp);
+
         ebp = p[0];
         // No point in storing getpcs %ebp
         if (first) {

@@ -289,10 +289,10 @@ pub fn freevm(pgdir: [*]mmu.PdEntry) void {
     // Free page tables pointed to by pgdir
     for (0..mmu.NPDENTRIES) |i| {
         if (pgdir[i] & mmu.PTE_P != 0) {
-            const va = memlayout.p2v(mmu.pteaddr(pgdir[i]));
-            kalloc.kfree(va);
+                const va = memlayout.p2v(mmu.pteaddr(pgdir[i]));
+                kalloc.kfree(va);
+            }
         }
-    }
 
     // Free page directory itself
     kalloc.kfree(@intFromPtr(pgdir));
@@ -333,8 +333,8 @@ pub fn copyout(pgdir: [*]mmu.PdEntry, va: usize, p: []const u8) bool {
         if (pa_boundary == 0) {
             return false;
         }
-        const n = @min(len, mmu.PGSIZE - (va - va_boundary));
-        string.memmove(pa_boundary + (va - va_boundary), @intFromPtr(&p[i]), n);
+        const n = @min(len, mmu.PGSIZE - (v - va_boundary));
+        string.memmove(pa_boundary + (v - va_boundary), @intFromPtr(&p[i]), n);
         len -= n;
         i += n;
         v = va_boundary + mmu.PGSIZE;

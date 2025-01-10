@@ -295,6 +295,15 @@ fn exec(path: [*:0]const u8, argv: [*]?[*:0]const u8) void {
     std.debug.print("m = {}\n", .{m});
 }
 
+pub fn _exec(_: [*:0]const u8, argv: [][*:0]const u8) i32 {
+    var args: [argv.len + 1]?[*:0]const u8 = undefined;
+    for (argv, 0..) |a, i| {
+        args[i] = a;
+    }
+    argv[argv.len] = null;
+    return 0;
+}
+
 const Proc = struct {
     sz: usize,
     esp: usize,

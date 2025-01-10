@@ -68,7 +68,7 @@ pub fn syscall() void {
         if (syscalls[num]()) |result| {
             currproc.tf.eax = result;
         } else |syserr| {
-            console.cprintf("{} for syscall {}, setting eax = -1\n", .{syserr, num});
+            console.cprintf("{} for syscall {}, setting eax = -1\n", .{ syserr, num });
             currproc.tf.eax = ERROR;
         }
     } else {
