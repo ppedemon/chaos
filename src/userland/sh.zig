@@ -2,7 +2,7 @@ const ulib = @import("ulib.zig");
 const std = @import("std");
 
 var buf: [128]u8 = undefined;
-var aux: [32]u8 = undefined;
+var aux: [128]u8 = undefined;
 
 fn panic(s: []const u8) noreturn {
     ulib.fputs(ulib.stderr, s);
@@ -15,6 +15,9 @@ fn getcmd() []u8 {
 }
 
 fn cstr(s: []const u8) [*:0]const u8 {
+    if (s.len + 1 > aux.len) {
+        panic("filename too long");
+    }
     @memcpy(aux[0..s.len], s);
     aux[s.len] = 0;
     return @ptrCast(&aux[0]);
