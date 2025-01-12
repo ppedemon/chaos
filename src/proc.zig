@@ -357,7 +357,7 @@ pub fn wait() ?u32 {
             haschildren = true;
             if (p.state == .ZOMBIE) {
                 const pid = p.pid;
-                
+
                 kalloc.kfree(p.kstack);
                 p.kstack = 0;
                 vm.freevm(p.pgdir);
@@ -418,6 +418,30 @@ pub fn exit() void {
     curproc.state = .ZOMBIE;
     sched();
     @panic("zombie exit");
+}
+
+pub fn growproc(n: isize) bool {
+    const curproc: *Proc = myproc() orelse @panic("growproc: no process");
+    const sz = curproc.sz;
+    var newsz: usize = undefined;
+
+    const sz0: usize = @intCast(@as(isize, @intCast(sz)) + n);
+
+    if (n > 0) {
+        newsz = vm.allocuvm(curproc.pgdir, sz, sz0);
+        if (newsz == 0) {
+            return false;
+        }
+    } else if (n < 0) {
+        newsz = vm.deallocuvm(curproc.pgdir, sz, sz0);
+        if (newsz == 0) {
+            return false;
+        }
+    }
+
+    curproc.sz = newsz;
+    vm.switchuvm(curproc);
+    return true;
 }
 
 pub fn procdump() void {

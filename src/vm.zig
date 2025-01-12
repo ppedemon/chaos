@@ -254,7 +254,7 @@ pub fn allocuvm(pgdir: [*]mmu.PdEntry, oldsz: usize, newsz: usize) usize {
 // Deallocate user pages to bring the process size from oldsz to newsz.
 // Size doesn't have top be page-aligned, not newsz be less than oldsz.
 // Also oldsz can be larger then the actual process size. Return newsz.
-fn deallocuvm(pgdir: [*]mmu.PdEntry, oldsz: usize, newsz: usize) usize {
+pub fn deallocuvm(pgdir: [*]mmu.PdEntry, oldsz: usize, newsz: usize) usize {
     if (newsz >= oldsz) {
         return oldsz;
     }

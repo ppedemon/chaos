@@ -47,7 +47,7 @@ const syscalls = [_]*const fn () err.SysErr!u32{
     sysfile.sys_chdir,
     sysfile.sys_dup,
     unimplemented,
-    unimplemented,
+    sysproc.sys_sbrk,
     unimplemented,
     unimplemented,
     sysfile.sys_open,
@@ -102,6 +102,11 @@ pub fn fetchstr(addr: usize, pp: *[]const u8) err.SysErr!void {
 
 pub fn argint(n: usize, ip: *u32) err.SysErr!void {
     return fetchint(proc.myproc().?.tf.esp + @sizeOf(usize) + n * @sizeOf(usize), ip);
+}
+
+pub fn argsigned(n: usize, ip: *i32) err.SysErr!void {
+    const p: *u32 = @as(*u32, @ptrCast(ip));
+    return fetchint(proc.myproc().?.tf.esp + @sizeOf(usize) + n * @sizeOf(usize), p);
 }
 
 pub fn argptr(n: usize, pp: *[]const u8, size: usize) err.SysErr!void {

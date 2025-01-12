@@ -26,6 +26,14 @@ export fn main() callconv(.C) void {
     //     }
     // }
 
+    // const p = ulib.sbrk(8192);
+    // if (p == -1) {
+    //     ulib.puts("Uh oh\n!");
+    // } else {
+    //     const ptr: [*]u8 = @ptrFromInt(@as(usize, @intCast(p)));
+    //     ulib.print("ptr = {x}\n", .{@intFromPtr(ptr)});
+    // }
+
     while (true) {
         ulib.puts("init: starting sh\n");
 

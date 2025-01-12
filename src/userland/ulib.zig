@@ -1,91 +1,43 @@
 comptime {
-    asm (
-        \\ .global fork
-        \\ fork:
-        \\  movl $1, %eax
-        \\  int $64
-        \\  ret
-    );
+    const syscalls = [_][]const u8{
+        "fork",
+        "exit",
+        "wait",
+        "pipe",
+        "read",
+        "kill",
+        "exec",
+        "fstat",
+        "chdir",
+        "dup",
+        "getpid",
+        "sbrk",
+        "sleep",
+        "uptime",
+        "open",
+        "write",
+        "mknod",
+        "unlink",
+        "link",
+        "mkdir",
+        "close",
+    };
 
-    asm (
-        \\ .global exit
-        \\ exit:
-        \\  movl $2, %eax
+    const template =
+        \\ .global {s}
+        \\ {s}:
+        \\  movl ${}, %eax
         \\  int $64
         \\  ret
-    );
+    ;
 
-    asm (
-        \\ .global wait
-        \\ wait:
-        \\  movl $3, %eax
-        \\  int $64
-        \\  ret
-    );
-
-    asm (
-        \\ .global read
-        \\ read:
-        \\  movl $5, %eax
-        \\  int $64
-        \\  ret
-    );
-
-    asm (
-        \\ .global exec
-        \\ exec:
-        \\  movl $7, %eax
-        \\  int $64
-        \\  ret
-    );
-
-    asm (
-        \\ .global chdir
-        \\ chdir:
-        \\  movl $9, %eax
-        \\  int $64
-        \\  ret
-    );
-
-    asm (
-        \\ .global dup
-        \\ dup:
-        \\  movl $10, %eax
-        \\  int $64
-        \\  ret
-    );
-
-    asm (
-        \\ .global open
-        \\ open:
-        \\  movl $15, %eax
-        \\  int $64
-        \\  ret
-    );
-
-    asm (
-        \\ .global write
-        \\ write:
-        \\  movl $16, %eax
-        \\  int $64
-        \\  ret
-    );
-
-    asm (
-        \\ .global mknod
-        \\ mknod:
-        \\  movl $17, %eax
-        \\  int $64
-        \\  ret
-    );
-
-    asm (
-        \\ .global close
-        \\ close:
-        \\  movl $21, %eax
-        \\  int $64
-        \\  ret
-    );
+    for (syscalls, 1..) |name, i| {
+        var buf: [512]u8 = undefined;
+        var fba = std.heap.FixedBufferAllocator.init(buf[0..]);
+        const allocator = fba.allocator();
+        const s = std.fmt.allocPrint(allocator, template, .{ name, name, i }) catch unreachable;
+        asm (s);
+    }
 }
 
 pub const O_RDONLY = 0x000;
@@ -100,6 +52,7 @@ pub extern fn read(fd: u32, buf: [*]u8, n: u32) callconv(.C) i32;
 pub extern fn exec(path: [*:0]const u8, argv: [*]const ?[*:0]const u8) callconv(.C) i32;
 pub extern fn chdir(path: [*:0]const u8) callconv(.C) i32;
 pub extern fn dup(fd: u32) callconv(.C) i32;
+pub extern fn sbrk(sz: isize) callconv(.C) i32;
 pub extern fn open(path: [*:0]const u8, omode: u32) callconv(.C) i32;
 pub extern fn write(fd: u32, buf: [*]const u8, n: u32) callconv(.C) i32;
 pub extern fn mknod(path: [*:0]const u8, major: u32, minor: u32) callconv(.C) i32;

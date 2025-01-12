@@ -262,12 +262,11 @@ pub fn main() !void {
 
     // exec("/initcode", argv);
 
-    var src: [3:0]u8 = undefined;
-    var dst: [3:0]u8 = undefined;
-    @memset(&src, 0);
-    @memcpy(&src, "abc");
-    string.safecpy(&dst, &src);
-    std.debug.print("Result = {s}\n", .{dst});
+    const x: u32 = 0x8000_0001;
+    var i: i32 = undefined;
+    @as(*u32, @ptrCast(&i)).* = x;
+
+    std.debug.print("i = {d}\n", .{i});
 }
 
 
