@@ -119,3 +119,5 @@ pub fn gets(buf: []u8) []u8 {
     }
     return buf[0..n];
 }
+
+pub usingnamespace @import("malloc.zig");

@@ -262,13 +262,23 @@ pub fn main() !void {
 
     // exec("/initcode", argv);
 
-    const x: u32 = 0x8000_0001;
-    var i: i32 = undefined;
-    @as(*u32, @ptrCast(&i)).* = x;
-
-    std.debug.print("i = {d}\n", .{i});
+    const h: Header = .{
+        .next = undefined,
+        .size = 0,
+    };
+    const h1: Header = .{
+        .next = undefined,
+        .size = 0,
+    };
+    const ph: [*]const Header = @ptrCast(&h);
+    std.debug.print("&h = {*}, &p[0] = {*}, p = {*}, p + 5 = {*}\n", .{&h, &ph[0], ph, ph + 5});
+    std.debug.print("{}\n", .{&h < &h1});
 }
 
+const Header = extern struct {
+  next: ?*Header,
+  size: usize,
+};
 
 fn exec(path: [*:0]const u8, argv: [*]?[*:0]const u8) void {
     var i: usize = 0;

@@ -24,7 +24,7 @@ pub fn sys_exit() err.SysErr!u32 {
 
 pub fn sys_sbrk() err.SysErr!u32 {
     var n: i32 = undefined;
-    try syscall.argsigned(0, &n);
+    try syscall.argsgn(0, &n);
 
     if (proc.myproc()) |p| {
         const addr = p.sz;

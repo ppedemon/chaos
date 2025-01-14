@@ -43,12 +43,20 @@ fn runcmd(cmd: []const u8) noreturn {
 export fn main() callconv(.C) void {
     var input: []u8 = undefined;
 
+    const p: [*]u8 = @ptrCast(ulib.malloc(512));
+    ulib.print("p = {*}\n", .{p});
+    const q: [*]u8 = @ptrCast(ulib.malloc(4096));
+    ulib.print("q = {*}\n", .{q});
+    ulib.free(p);
+    ulib.free(q);
+    ulib.puts("freed memory\n");
+
     while (true) {
         input = getcmd();
         if (input.len == 0) {
             break;
         }
-        if (std.mem.eql(u8, input[0..input.len - 1], "cd")) {
+        if (std.mem.eql(u8, input[0 .. input.len - 1], "cd")) {
             continue;
         }
 
@@ -60,7 +68,7 @@ export fn main() callconv(.C) void {
             continue;
         }
 
-        const cmd = parsecmd(input[0..input.len - 1]);
+        const cmd = parsecmd(input[0 .. input.len - 1]);
         if (cmd.len == 0) {
             continue;
         }

@@ -44,14 +44,15 @@ pub fn cputs(msg: []const u8) void {
     }
 }
 
+var pbuf: [1024]u8 = undefined;
+
 pub fn cprintf(comptime format: []const u8, args: anytype) void {
     if (cons.locking and !cons.lock.holding()) {
         cons.lock.acquire();
         defer cons.lock.release();
     }
 
-    var buf: [1024]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(buf[0..]);
+    var fba = std.heap.FixedBufferAllocator.init(pbuf[0..]);
     const allocator = fba.allocator();
     const s = std.fmt.allocPrint(allocator, format, args) catch "error";
     cputs(s);
