@@ -20,8 +20,8 @@ inline fn int(p: *const Header) usize {
   return @intFromPtr(p);
 }
 
-pub fn free(ap: *const anyopaque) void {
-    const bp: [*]Header = @as([*]Header, @constCast(@alignCast(@ptrCast(ap)))) - 1;
+pub fn free(ap: usize) void {
+    const bp: [*]Header = @as([*]Header, @ptrFromInt(ap)) - 1;
     var bphead: *Header = &bp[0];
 
     var p = freep orelse unreachable;
@@ -57,14 +57,13 @@ fn morecore(nu: usize) ?*Header {
     }
 
     const up = @as(usize, @intCast(p));
-    ulib.print("morecore, p = {x}\n", .{up});
     var hp: *Header = @alignCast(@as(*Header, @ptrFromInt(up)));
     hp.size = units;
-    free(many(hp) + 1);
+    free(@intFromPtr(many(hp) + 1));
     return freep;
 }
 
-pub fn malloc(nbytes: usize) ?*anyopaque {
+pub fn malloc(nbytes: usize) usize {
     const nunits = (nbytes + @sizeOf(Header) - 1) / @sizeOf(Header) + 1;
 
     if (freep == null) {
@@ -87,10 +86,10 @@ pub fn malloc(nbytes: usize) ?*anyopaque {
                 p.size = nunits;
             }
             freep = prevp;
-            return many(p) + 1;
+            return @intFromPtr(many(p) + 1);
         }
         if (p == freep) {
-            p = morecore(nunits) orelse return null;
+            p = morecore(nunits) orelse return 0;
         }
     }
 }

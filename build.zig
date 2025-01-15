@@ -4,6 +4,7 @@ const Target = std.Target;
 const userProgs = [_][]const u8{
     "src/userland/init.zig",
     "src/userland/sh.zig",
+    "src/userland/echo.zig",
 };
 
 fn execName(path: []const u8) []const u8 {
@@ -38,7 +39,7 @@ fn mkfsCmd(allocator: *const std.mem.Allocator) ![]const []const u8 {
     cmd[4] = "fs.img";
     for (userProgs, 5..) |prog, i| {
         cmd[i] = installName(prog, allocator) catch {
-            @panic("out of memomry");
+            @panic("out of memmory");
         };
     }
     return cmd;
@@ -187,7 +188,7 @@ pub fn build(b: *std.Build) void {
     // quick run variant: run kernel without making user progs not file system
     const quick_qemu_cmd = b.addSystemCommand(&qemu_str);
     quick_qemu_cmd.step.dependOn(b.getInstallStep());
-    
+
     const quick_run_step = b.step("quickrun", "run the kernel on quemu (no user progs or fs built)");
     quick_run_step.dependOn(&quick_qemu_cmd.step);
 }

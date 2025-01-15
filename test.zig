@@ -261,24 +261,78 @@ pub fn main() !void {
     // }));
 
     // exec("/initcode", argv);
-
-    const h: Header = .{
-        .next = undefined,
-        .size = 0,
-    };
-    const h1: Header = .{
-        .next = undefined,
-        .size = 0,
-    };
-    const ph: [*]const Header = @ptrCast(&h);
-    std.debug.print("&h = {*}, &p[0] = {*}, p = {*}, p + 5 = {*}\n", .{&h, &ph[0], ph, ph + 5});
-    std.debug.print("{}\n", .{&h < &h1});
+    var input: []const u8 = "";
+    // var tok: []const u8 = undefined;
+    // var etok: []const u8 = undefined;
+    //const ok = peek(&input, "<>");
+    //std.debug.print("input = |{s}|, ok = {}\n", .{input, ok});
+    // const result = gettok(&input, &tok, &etok);
+    // std.debug.print("result = #{s}#, tok = #{s}#, etok = {s}, rest = #{s}#\n", .{ [1]u8{result}, tok, etok, input });
+    parseredirs(&input);
+    std.debug.print("rest = {s}\n", .{input});
 }
 
-const Header = extern struct {
-  next: ?*Header,
-  size: usize,
-};
+const whitespace = " \t\r\n";
+const symbols = "<|>&;()";
+
+fn parseredirs(input: *[]const u8) void {
+    var f: []const u8 = undefined;
+    while (peek(input, "<>")) {
+        const tok = gettok(input, null);
+        if (gettok(input, &f) != 'a') {
+            @panic("no redirection");
+        }
+        std.debug.print("tok = {s}, f = {s}\n", .{[1]u8{tok}, f});
+        break;
+    }
+} 
+
+fn gettok(input: *[]const u8, tok: ?*[]const u8) u8 {
+    var s = std.mem.trim(u8, input.*, whitespace);
+    if (tok != null) {
+        tok.?.* = s;
+    }
+    var ret: u8 = 0;
+    var len: usize = 0;
+    if (s.len > 0) {
+        ret = s[0];
+        switch (s[0]) {
+            '|', '(', ')', ';', '&', '<' => {
+                len = 1;
+                s = s[1..];
+            },
+            '>' => {
+                len = 1;
+                s = s[1..];
+                if (s.len > 0 and s[0] == '>') {
+                    len = 2;
+                    ret = '+'; // file append
+                    s = s[1..];
+                }
+            },
+            else => {
+                ret = 'a'; // alphanum
+                len = std.mem.indexOfAny(u8, s, whitespace ++ symbols) orelse s.len;
+                s = s[len..];
+            },
+        }
+        if (tok != null) {
+            tok.?.* = tok.?.*[0..len];
+        }
+        s = std.mem.trim(u8, s, whitespace);
+    }
+    input.* = s;
+    return ret;
+}
+
+fn peek(input: *[]const u8, toks: []const u8) bool {
+    if (std.mem.indexOfNone(u8, input.*, whitespace)) |start| {
+        input.* = input.*[start..];
+        return std.mem.indexOfAny(u8, toks, input.*[0..1]) != null;
+    }
+    input.* = input.*[input.len..];
+    return false;
+}
 
 fn exec(path: [*:0]const u8, argv: [*]?[*:0]const u8) void {
     var i: usize = 0;
