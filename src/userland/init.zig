@@ -2,6 +2,8 @@ const ulib = @import("ulib.zig");
 
 var shargv = [_]?[*:0]const u8{ "/sh", null };
 
+
+
 export fn main() callconv(.C) void {
     // const pid = ulib.fork();
     // if (pid < 0) {
@@ -33,6 +35,8 @@ export fn main() callconv(.C) void {
     //     const ptr: [*]u8 = @ptrFromInt(@as(usize, @intCast(p)));
     //     ulib.print("ptr = {x}\n", .{@intFromPtr(ptr)});
     // }
+
+    ulib.init();
 
     while (true) {
         ulib.puts("init: starting sh\n");

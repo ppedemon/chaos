@@ -117,7 +117,12 @@ fn runcmd(cmd: *Cmd) noreturn {
         },
         .REDIR => {
             const redir: *CmdRedir = @ptrCast(cmd);
-            ulib.print("redir file = {s} end = {} mode = {} fd = {}\n", .{ redir.file[0..redir.flen], redir.file[redir.flen], redir.mode, redir.fd });
+            _ = ulib.close(redir.fd);
+            const newfd = ulib.open(redir.file, redir.mode);
+            if (newfd < 0) {
+                ulib.fprint(ulib.stderr, "open {s} failed\n", .{redir.file});
+                ulib.exit();
+            }
             runcmd(redir.cmd);
         },
         .PIPE => {

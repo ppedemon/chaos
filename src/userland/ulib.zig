@@ -60,25 +60,18 @@ pub extern fn close(fd: u32) callconv(.C) i32;
 
 const std = @import("std");
 
-pub var stdin: u32 = undefined;
-pub var stdout: u32 = undefined;
-pub var stderr: u32 = undefined;
+pub const stdin: u32 = 0;
+pub const stdout: u32 = 1;
+pub const stderr: u32 = 2;
 
-export fn libinit() i32 {
+pub fn init() void {
     if (open("console", O_RDWR) < 0) {
         // Create an inode for device major 1 (that is, console)
-        if (mknod("console", 1, 1) < 0) {
-            return -1;
-        }
-        const result = open("console", O_RDWR);
-        if (result < 0) {
-            return -1;
-        }
-        stdin = @intCast(result);
-        stdout = @intCast(dup(stdin));
-        stderr = @intCast(dup(stdin));
+        _ = mknod("console", 1, 1);
+        _ = open("console", O_RDWR); // stdin = 0
     }
-    return 0;
+    _ = dup(0); // stdout = 1
+    _ = dup(0); // stderr = 2
 }
 
 pub fn fputs(fd: u32, s: []const u8) void {

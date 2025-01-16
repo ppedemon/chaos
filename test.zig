@@ -261,15 +261,10 @@ pub fn main() !void {
     // }));
 
     // exec("/initcode", argv);
-    var input: []const u8 = "";
-    // var tok: []const u8 = undefined;
-    // var etok: []const u8 = undefined;
-    //const ok = peek(&input, "<>");
-    //std.debug.print("input = |{s}|, ok = {}\n", .{input, ok});
-    // const result = gettok(&input, &tok, &etok);
-    // std.debug.print("result = #{s}#, tok = #{s}#, etok = {s}, rest = #{s}#\n", .{ [1]u8{result}, tok, etok, input });
-    parseredirs(&input);
-    std.debug.print("rest = {s}\n", .{input});
+    var buf: [512]u8 = undefined;
+    buf[0] = 'a';
+    const ptr: [*]u8 = &buf;
+    std.debug.print("p[0] = {}", .{ptr[0]});
 }
 
 const whitespace = " \t\r\n";

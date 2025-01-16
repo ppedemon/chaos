@@ -59,7 +59,7 @@ const syscalls = [_]*const fn () err.SysErr!u32{
     sysfile.sys_close,
 };
 
-const ERROR = 0xFFFF_FFFF; // That iss, -1 when interpreted as a signed integer
+const ERROR = 0xFFFF_FFFF; // That is, -1 when interpreted as a signed integer
 
 pub fn syscall() void {
     const curproc: *proc.Proc = proc.myproc() orelse @panic("syscall: no proc");
