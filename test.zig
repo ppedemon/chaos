@@ -261,10 +261,30 @@ pub fn main() !void {
     // }));
 
     // exec("/initcode", argv);
-    var buf: [512]u8 = undefined;
-    buf[0] = 'a';
-    const ptr: [*]u8 = &buf;
-    std.debug.print("p[0] = {}", .{ptr[0]});
+    // var buf: [14]u8 = [_]u8{'*'} ** 14;
+    // @memset(&buf, 0);
+    // const s: [*:0]const u8 = "hola";
+    // const slice = std.mem.sliceTo(s, 0);
+    // @memcpy(buf[0..slice.len], slice);
+    // std.debug.print("buf = {s}, last = {}, terminator = {}\n", .{slice, buf[3], buf[4]});
+    // const static = struct {
+    //     var buf: [14]u8 = undefined;
+    // };
+    // @memset(&static.buf, ' ');
+    // const path: [*:0]const u8 = "./letters01.txt+";
+    // const slice = std.mem.sliceTo(path, 0);
+    // const i = std.mem.lastIndexOf(u8, slice, "/");
+    // const filename: []const u8 = if (i) |start| slice[start + 1 ..] else slice;
+    // const len = @min(static.buf.len, filename.len);
+    // @memcpy(static.buf[0..len], filename[0..len]);
+    // const final: []const u8 = &static.buf;
+    // std.debug.print("filename = |{s}|\n", .{final});
+    var name: [13:0]u8 = undefined;
+    @memset(name[0..name.len], 0);
+    const s = "hola.txt";
+    @memcpy(name[0..s.len], s);
+    std.debug.print("|{s}|\n", .{std.mem.sliceTo(&name, 0)});
+    std.debug.print("p = {*}, p[0] = {}", .{&name, (&name[0]).*});
 }
 
 const whitespace = " \t\r\n";
@@ -277,10 +297,10 @@ fn parseredirs(input: *[]const u8) void {
         if (gettok(input, &f) != 'a') {
             @panic("no redirection");
         }
-        std.debug.print("tok = {s}, f = {s}\n", .{[1]u8{tok}, f});
+        std.debug.print("tok = {s}, f = {s}\n", .{ [1]u8{tok}, f });
         break;
     }
-} 
+}
 
 fn gettok(input: *[]const u8, tok: ?*[]const u8) u8 {
     var s = std.mem.trim(u8, input.*, whitespace);

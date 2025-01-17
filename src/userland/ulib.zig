@@ -1,3 +1,7 @@
+const std = @import("std");
+const share = @import("share");
+const fcntl = share.fcntl;
+
 comptime {
     const syscalls = [_][]const u8{
         "fork",
@@ -46,6 +50,7 @@ pub extern fn wait() callconv(.C) i32;
 pub extern fn pipe(p: [*]u32) callconv(.C) i32;
 pub extern fn read(fd: u32, buf: [*]u8, n: u32) callconv(.C) i32;
 pub extern fn exec(path: [*:0]const u8, argv: [*]const ?[*:0]const u8) callconv(.C) i32;
+pub extern fn fstat(fd: u32, st: *share.stat.Stat) callconv(.C) i32;
 pub extern fn chdir(path: [*:0]const u8) callconv(.C) i32;
 pub extern fn dup(fd: u32) callconv(.C) i32;
 pub extern fn sbrk(sz: isize) callconv(.C) i32;
@@ -53,11 +58,6 @@ pub extern fn open(path: [*:0]const u8, omode: u32) callconv(.C) i32;
 pub extern fn write(fd: u32, buf: [*]const u8, n: u32) callconv(.C) i32;
 pub extern fn mknod(path: [*:0]const u8, major: u32, minor: u32) callconv(.C) i32;
 pub extern fn close(fd: u32) callconv(.C) i32;
-
-const std = @import("std");
-
-const share = @import("share");
-const fcntl = share.fcntl;
 
 pub const stdin: u32 = 0;
 pub const stdout: u32 = 1;
@@ -110,6 +110,17 @@ pub fn gets(buf: []u8) []u8 {
         }
     }
     return buf[0..n];
+}
+
+pub fn stat(path: [*:0]const u8, st: *share.stat.Stat) i32 {
+    const fd: i32 = open(path, fcntl.O_RDONLY);
+    if (fd < 0) {
+        return -1;
+    }
+    defer {
+        _ = close(@intCast(fd));
+    }
+    return fstat(@intCast(fd), st);
 }
 
 pub usingnamespace @import("malloc.zig");

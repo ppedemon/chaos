@@ -92,7 +92,7 @@ fn create(path: []const u8, ty: u16, major: u16, minor: u16) err.SysErr!*fs.Inod
 
 pub fn sys_pipe() err.SysErr!u32 {
     var buf: []u8 = undefined;
-    try syscall.argptr(0, &buf, @sizeOf([2]u32));    
+    try syscall.argptr(0, &buf, @sizeOf([2]u32));
     var p: [*]u32 = @alignCast(@ptrCast(buf.ptr));
 
     var rf: *file.File = undefined;
@@ -101,7 +101,7 @@ pub fn sys_pipe() err.SysErr!u32 {
     if (!ok) {
         return err.SysErr.ErrMaxOpen;
     }
-    
+
     errdefer {
         rf.fclose();
         wf.fclose();
@@ -155,6 +155,20 @@ pub fn sys_exec() err.SysErr!u32 {
 
     const exec_argv: []const []const u8 = argv[0..i];
     return exec.exec(path, exec_argv);
+}
+
+pub fn sys_fstat() err.SysErr!u32 {
+    var f: *file.File = undefined;
+    var buf: []u8 = undefined;
+
+    try argfd(0, null, &f);
+    try syscall.argptr(1, &buf, @sizeOf(stat.Stat));
+
+    const st: *stat.Stat = @alignCast(@ptrCast(buf.ptr));
+    if (f.fstat(st)) {
+        return 0;
+    }
+    return err.SysErr.ErrBadFd;
 }
 
 pub fn sys_chdir() err.SysErr!u32 {
