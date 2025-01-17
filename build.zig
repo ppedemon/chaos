@@ -46,7 +46,12 @@ fn mkfsCmd(allocator: *const std.mem.Allocator) ![]const []const u8 {
     return cmd;
 }
 
-fn buildUserland(b: *std.Build, target: std.Build.ResolvedTarget, allocator: *const std.mem.Allocator) *std.Build.Step {
+fn buildUserland(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    share: *std.Build.Module,
+    allocator: *const std.mem.Allocator,
+) *std.Build.Step {
     const step = b.step("userland", "build user programs");
 
     for (userProgs) |prog| {
@@ -61,6 +66,7 @@ fn buildUserland(b: *std.Build, target: std.Build.ResolvedTarget, allocator: *co
             .target = target,
             .optimize = .ReleaseSmall,
         });
+        obj.root_module.addImport("share", share);
         const exec = b.addExecutable(.{
             .name = exec_name,
             .root_source_file = b.path("src/userland/start.zig"),
@@ -98,13 +104,19 @@ pub fn build(b: *std.Build) void {
         .cpu_features_add = enabled_features,
     });
 
+    const share = b.createModule(.{
+        .root_source_file = b.path("src/share/index.zig"),
+        .target = target,
+        .optimize = .ReleaseSmall,
+    });
+
     // -------------------------------------------------------------------
     // Setup step for building userland programs
     // -------------------------------------------------------------------
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const allocator = arena.allocator();
     defer arena.deinit();
-    const user_step = buildUserland(b, target, &allocator);
+    const user_step = buildUserland(b, target, share, &allocator);
 
     // -------------------------------------------------------------------
     // Setup step for creating file system
@@ -145,6 +157,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    main.root_module.addImport("share", share);
 
     const kernel = b.addExecutable(.{
         .name = "kernel.elf",

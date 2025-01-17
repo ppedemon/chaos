@@ -8,11 +8,12 @@ const log = @import("log.zig");
 const param = @import("param.zig");
 const pipe = @import("pipe.zig");
 const proc = @import("proc.zig");
-const stat = @import("stat.zig");
 const string = @import("string.zig");
 const syscall = @import("syscall.zig");
 
 const std = @import("std");
+const fcntl = @import("share").fcntl;
+const stat = @import("share").stat;
 
 fn argfd(n: usize, pfd: ?*u32, pf: ?**file.File) err.SysErr!void {
     const curproc: *proc.Proc = proc.myproc() orelse @panic("argfd: no process");
@@ -201,7 +202,7 @@ pub fn sys_open() err.SysErr!u32 {
     log.begin_op();
     defer log.end_op();
 
-    if (omode & file.O_CREATE != 0) {
+    if (omode & fcntl.O_CREATE != 0) {
         ip = try create(path, stat.T_FILE, 0, 0);
     } else {
         if (dir.namei(path)) |result| {
@@ -210,7 +211,7 @@ pub fn sys_open() err.SysErr!u32 {
             return err.SysErr.ErrNoEnt;
         }
         ip.ilock();
-        if (ip.ty == stat.T_DIR and omode != file.O_RDONLY) {
+        if (ip.ty == stat.T_DIR and omode != fcntl.O_RDONLY) {
             ip.iunlockput();
             return err.SysErr.ErrInval;
         }
@@ -225,8 +226,8 @@ pub fn sys_open() err.SysErr!u32 {
         f.ty = file.FileType.FD_INODE;
         f.inode = ip;
         f.off = 0;
-        f.readable = (omode & file.O_WRONLY) == 0;
-        f.writable = (omode & file.O_WRONLY) != 0 or (omode & file.O_RDWR) != 0;
+        f.readable = (omode & fcntl.O_WRONLY) == 0;
+        f.writable = (omode & fcntl.O_WRONLY) != 0 or (omode & fcntl.O_RDWR) != 0;
         ip.iunlock();
         return fd;
     } else {

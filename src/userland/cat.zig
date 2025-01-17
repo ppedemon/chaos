@@ -1,4 +1,5 @@
 const ulib = @import("ulib.zig");
+const fcntl = @import("share").fcntl;
 
 var buf: [512]u8 = undefined;
 
@@ -23,7 +24,7 @@ export fn main(argc: u32, argv: [*][*:0]const u8) void {
         ulib.exit();
     }
     for (1..argc) |i| {
-        const result = ulib.open(argv[i], ulib.O_RDONLY);
+        const result = ulib.open(argv[i], fcntl.O_RDONLY);
         if (result < 0) {
             ulib.fprint(ulib.stderr, "cat: cannot open {s}\n", .{argv[i]});
             ulib.exit();

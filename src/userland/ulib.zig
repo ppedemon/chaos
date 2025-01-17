@@ -40,11 +40,6 @@ comptime {
     }
 }
 
-pub const O_RDONLY = 0x000;
-pub const O_WRONLY = 0x001;
-pub const O_RDWR = 0x002;
-pub const O_CREATE = 0x200;
-
 pub extern fn fork() callconv(.C) i32;
 pub extern fn exit() callconv(.C) noreturn;
 pub extern fn wait() callconv(.C) i32;
@@ -61,15 +56,18 @@ pub extern fn close(fd: u32) callconv(.C) i32;
 
 const std = @import("std");
 
+const share = @import("share");
+const fcntl = share.fcntl;
+
 pub const stdin: u32 = 0;
 pub const stdout: u32 = 1;
 pub const stderr: u32 = 2;
 
 pub fn init() void {
-    if (open("console", O_RDWR) < 0) {
+    if (open("console", fcntl.O_RDWR) < 0) {
         // Create an inode for device major 1 (that is, console)
         _ = mknod("console", 1, 1);
-        _ = open("console", O_RDWR); // stdin = 0
+        _ = open("console", fcntl.O_RDWR); // stdin = 0
     }
     _ = dup(0); // stdout = 1
     _ = dup(0); // stderr = 2

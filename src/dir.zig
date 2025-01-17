@@ -1,10 +1,10 @@
 const fs = @import("fs.zig");
 const param = @import("param.zig");
 const proc = @import("proc.zig");
-const stat = @import("stat.zig");
 const string = @import("string.zig");
 
 const std = @import("std");
+const stat = @import("share").stat;
 
 pub fn namecmp(cstr: [:0]u8, str: []const u8) bool {
     return std.mem.eql(u8, string.safeslice(cstr), str);

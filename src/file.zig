@@ -1,14 +1,11 @@
+
 const fs = @import("fs.zig");
 const log = @import("log.zig");
 const param = @import("param.zig");
 const pipe = @import("pipe.zig");
 const spinlock = @import("spinlock.zig");
-const stat = @import("stat.zig");
 
-pub const O_RDONLY = 0x000;
-pub const O_WRONLY = 0x001;
-pub const O_RDWR = 0x002;
-pub const O_CREATE = 0x200;
+const stat = @import("share").stat;
 
 pub const FileType = enum {
     FD_NONE,

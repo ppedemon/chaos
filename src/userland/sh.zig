@@ -1,4 +1,6 @@
 const ulib = @import("ulib.zig");
+const fcntl = @import("share").fcntl;
+
 const std = @import("std");
 
 fn panic(s: []const u8) noreturn {
@@ -268,9 +270,9 @@ fn parseredirs(cmd: *Cmd, input: *[]u8) *Cmd {
             panic("missing file for redierection");
         }
         c = switch (tok) {
-            '<' => CmdRedir.init(c, q, ulib.O_RDONLY, 0),
-            '>' => CmdRedir.init(c, q, ulib.O_WRONLY | ulib.O_CREATE, 1),
-            '+' => CmdRedir.init(c, q, ulib.O_WRONLY | ulib.O_CREATE, 1),
+            '<' => CmdRedir.init(c, q, fcntl.O_RDONLY, 0),
+            '>' => CmdRedir.init(c, q, fcntl.O_WRONLY | fcntl.O_CREATE, 1),
+            '+' => CmdRedir.init(c, q, fcntl.O_WRONLY | fcntl.O_CREATE, 1),
             else => unreachable,
         };
     }

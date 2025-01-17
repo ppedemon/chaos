@@ -5,10 +5,10 @@ const log = @import("log.zig");
 const param = @import("param.zig");
 const sleeplock = @import("sleeplock.zig");
 const spinlock = @import("spinlock.zig");
-const stat = @import("stat.zig");
 const string = @import("string.zig");
 
 const std = @import("std");
+const stat = @import("share").stat;
 
 pub const ROOTINO = 1;
 pub const BSIZE = 512;
