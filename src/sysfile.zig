@@ -284,6 +284,18 @@ pub fn sys_mknod() err.SysErr!u32 {
     return 0;
 }
 
+pub fn sys_mkdir() err.SysErr!u32 {
+    var path: []u8 = undefined;
+    try syscall.argstr(0, &path);
+
+    log.begin_op();
+    defer log.end_op();
+
+    const ip = try create(path, stat.T_DIR, 0, 0);
+    ip.iunlockput();
+    return 0;
+}
+
 pub fn sys_close() err.SysErr!u32 {
     var fd: u32 = undefined;
     var f: *file.File = undefined;
