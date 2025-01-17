@@ -39,7 +39,7 @@ const syscalls = [_]*const fn () err.SysErr!u32{
     sysproc.sys_fork,
     sysproc.sys_exit,
     sysproc.sys_wait,
-    unimplemented,
+    sysfile.sys_pipe,
     sysfile.sys_read,
     unimplemented,
     sysfile.sys_exec,

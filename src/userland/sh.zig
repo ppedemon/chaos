@@ -127,17 +127,46 @@ fn runcmd(cmd: *Cmd) noreturn {
         },
         .PIPE => {
             const pipe: *CmdPipe = @ptrCast(cmd);
-            ulib.print("pipe left = {} right = {}\n", .{ pipe.left.kind, pipe.right.kind });
+            var p: [2]u32 = undefined;
+            if (ulib.pipe(&p) < 0) {
+                panic("pipe");
+            }
+            if (fork1() == 0) {
+                // Left process: map write end of the pipe to stdout
+                _ = ulib.close(ulib.stdout);
+                _ = ulib.dup(p[1]);
+                _ = ulib.close(p[0]);
+                _ = ulib.close(p[1]);
+                runcmd(pipe.left);
+            }
+            if (fork1() == 0) {
+                // Right process: map read end of the pipe to stdin
+                _ = ulib.close(ulib.stdin);
+                _ = ulib.dup(p[0]);
+                _ = ulib.close(p[0]);
+                _ = ulib.close(p[1]);
+                runcmd(pipe.right);
+            }
+            // Parent process: wait for left and right to finish
+            _ = ulib.close(p[0]);
+            _ = ulib.close(p[1]);
+            _ = ulib.wait();
+            _ = ulib.wait();
             ulib.exit();
         },
         .BACK => {
             const back: *CmdBack = @ptrCast(cmd);
-            ulib.print("background child = {}\n", .{back.cmd.kind});
-            runcmd(back.cmd);
+            if (fork1() == 0) {
+                runcmd(back.cmd);
+            }
+            ulib.exit();
         },
         .LIST => {
             const list: *CmdList = @ptrCast(cmd);
-            ulib.print("list head = {}\n", .{list.head.kind});
+            if (fork1() == 0) {
+                runcmd(list.head);
+            }
+            _ = ulib.wait();
             runcmd(list.tail);
         },
     }
@@ -368,9 +397,8 @@ export fn main() callconv(.C) void {
 
         if (fork1() == 0) {
             runcmd(parsecmd(&input));
-        } else {
-            _ = ulib.wait();
         }
+        _ = ulib.wait();
     }
 
     ulib.exit();

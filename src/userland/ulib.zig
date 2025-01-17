@@ -48,6 +48,7 @@ pub const O_CREATE = 0x200;
 pub extern fn fork() callconv(.C) i32;
 pub extern fn exit() callconv(.C) noreturn;
 pub extern fn wait() callconv(.C) i32;
+pub extern fn pipe(p: [*]u32) callconv(.C) i32;
 pub extern fn read(fd: u32, buf: [*]u8, n: u32) callconv(.C) i32;
 pub extern fn exec(path: [*:0]const u8, argv: [*]const ?[*:0]const u8) callconv(.C) i32;
 pub extern fn chdir(path: [*:0]const u8) callconv(.C) i32;

@@ -54,8 +54,7 @@ export fn main() callconv(.C) void {
         }
         var wpid = ulib.wait();
         while (wpid >= 0 and wpid != pid) {
-            ulib.fputs(ulib.stderr, "zombie!\n"); // A process other than sh finished
-            wpid = ulib.wait();
+            wpid = ulib.wait(); // A process other than sh finished, continue waiting
         }
     }
 }

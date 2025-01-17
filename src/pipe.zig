@@ -15,22 +15,25 @@ pub const Pipe = struct {
 
     const Self = @This();
 
-    inline fn cleanup(fr: *?*file.File, fw: *?*file.File) void {
-        if (fr.*) |f| {
+    inline fn cleanup(fr: ?*file.File, fw: ?*file.File) void {
+        if (fr) |f| {
             f.fclose();
         }
-        if (fw.*) |f| {
+        if (fw) |f| {
             f.fclose();
         }
     }
 
-    pub fn palloc(fr: *?*file.File, fw: *?*file.File) bool {
-        fr.* = file.File.falloc();
-        fw.* = file.File.falloc();
-        if (fr.* == null or fw.* == null) {
-            cleanup(fr, fw);
+    pub fn palloc(fr: **file.File, fw: **file.File) bool {
+        const pr = file.File.falloc();
+        const pw = file.File.falloc();
+        if (pr == null or pw == null) {
+            cleanup(pr, pw);
             return false;
         }
+
+        fr.* = pr.?;
+        fw.* = pw.?;
 
         const p = kalloc.kalloc() orelse return false;
         const pipe: *Self = @alignCast(@as(*Self, @ptrFromInt(p)));
@@ -38,20 +41,17 @@ pub const Pipe = struct {
         pipe.nread = 0;
         pipe.readopen = true;
         pipe.writeopen = true;
-        pipe.lock.init("pipe");
+        pipe.lock = spinlock.SpinLock.init("pipe");
 
-        if (fr.*) |f| {
-            f.ty = .FD_PIPE;
-            f.readable = true;
-            f.writable = false;
-            f.pipe = pipe;
-        }
-        if (fw.*) |f| {
-            f.ty = .FD_PIPE;
-            f.readable = false;
-            f.writable = true;
-            f.pipe = pipe;
-        }
+        fr.*.ty = .FD_PIPE;
+        fr.*.readable = true;
+        fr.*.writable = false;
+        fr.*.pipe = pipe;
+
+        fw.*.ty = .FD_PIPE;
+        fw.*.readable = false;
+        fw.*.writable = true;
+        fw.*.pipe = pipe;
 
         return true;
     }

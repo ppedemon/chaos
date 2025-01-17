@@ -6,6 +6,7 @@ const file = @import("file.zig");
 const fs = @import("fs.zig");
 const log = @import("log.zig");
 const param = @import("param.zig");
+const pipe = @import("pipe.zig");
 const proc = @import("proc.zig");
 const stat = @import("stat.zig");
 const string = @import("string.zig");
@@ -86,6 +87,34 @@ fn create(path: []const u8, ty: u16, major: u16, minor: u16) err.SysErr!*fs.Inod
 
     // No parent inode for the file we intend to create
     return err.SysErr.ErrNoEnt;
+}
+
+pub fn sys_pipe() err.SysErr!u32 {
+    var buf: []u8 = undefined;
+    try syscall.argptr(0, &buf, @sizeOf([2]u32));    
+    var p: [*]u32 = @alignCast(@ptrCast(buf.ptr));
+
+    var rf: *file.File = undefined;
+    var wf: *file.File = undefined;
+    const ok = pipe.Pipe.palloc(&rf, &wf);
+    if (!ok) {
+        return err.SysErr.ErrMaxOpen;
+    }
+    
+    errdefer {
+        rf.fclose();
+        wf.fclose();
+    }
+
+    const fd0 = try fdalloc(rf);
+    const fd1 = fdalloc(wf) catch |syserr| {
+        proc.myproc().?.ofile[fd0] = null;
+        return syserr;
+    };
+
+    p[0] = fd0;
+    p[1] = fd1;
+    return 0;
 }
 
 pub fn sys_read() err.SysErr!u32 {
