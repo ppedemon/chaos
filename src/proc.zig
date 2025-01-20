@@ -467,11 +467,16 @@ fn procpcs(proc: *Proc, pcs: []usize) void {
     const ebp_ptr: *usize = @ptrFromInt(@intFromPtr(&proc.context.ebp) + 2 * @sizeOf(usize));
     var ebp = ebp_ptr.*;
     var i: usize = 0;
-    while (ebp != 0 and ebp != 0xFFFF_FFFF and ebp >= memlayout.KERNBASE and i < pcs.len) : (i += 1) {
+    while (ebp != 0 and ebp != 0xFFFF_FFFF and ebp >= memlayout.KERNBASE and ebp % 4 == 0 and i < pcs.len) : (i += 1) {
         const p: [*]const usize = @ptrFromInt(ebp);
         ebp = p[0];
         pcs[i] = p[1];
     }
+
+    if (ebp >= memlayout.KERNBASE and ebp != 0xFFFF_FFFF and ebp % 4 != 0) {
+        console.cputs("ebp not 4-byte aligned, something is really wrong the memory\n!");
+    }
+
     while (i < pcs.len) : (i += 1) {
         pcs[i] = 0;
     }

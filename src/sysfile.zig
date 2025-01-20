@@ -329,7 +329,7 @@ pub fn sys_unlink() err.SysErr!u32 {
             }
 
             var de: fs.DirEnt = undefined;
-            const slice = std.mem.asBytes(&de); 
+            const slice = std.mem.asBytes(&de);
             @memset(slice, 0);
             if (dp.writei(slice, off, @sizeOf(fs.DirEnt)) != @sizeOf(fs.DirEnt)) {
                 @panic("unlink: writei");
@@ -347,6 +347,53 @@ pub fn sys_unlink() err.SysErr!u32 {
     }
 
     //No parent inode or inode for the file we intend to delete
+    return err.SysErr.ErrNoEnt;
+}
+
+// Create new path as a link to the inode for the old path
+pub fn sys_link() err.SysErr!u32 {
+    var old: []u8 = undefined;
+    var new: []u8 = undefined;
+    try syscall.argstr(0, &old);
+    try syscall.argstr(1, &new);
+
+    log.begin_op();
+    defer log.end_op();
+
+    if (dir.namei(old)) |ip| {
+        ip.ilock();
+        if (ip.ty == stat.T_DIR) {
+            ip.iunlockput();
+            return err.SysErr.ErrIsDir;
+        }
+
+        defer ip.iput();
+
+        ip.nlink += 1;
+        ip.iupdate();
+        ip.iunlock();
+
+        var name: [fs.DIRSIZE:0]u8 = undefined;
+        if (dir.nameiparent(new, &name)) |dp| {
+            dp.ilock();
+            defer dp.iunlockput();
+
+            const fname = string.safeslice(@as([:0]u8, @ptrCast(&name)));
+            if (dp.dev != ip.dev or !dir.dirlink(dp, fname, ip.inum)) {
+                return err.SysErr.ErrNoEnt;
+            }
+
+            return 0;
+        } else {
+            // Error handling when no parent for new path: undo link increment in ip
+            ip.ilock();
+            ip.nlink -= 1;
+            ip.iupdate();
+            ip.iunlock();
+        }
+    }
+
+    // no inode for old or new
     return err.SysErr.ErrNoEnt;
 }
 

@@ -9,6 +9,7 @@ const userProgs = [_][]const u8{
     "src/userland/ls.zig",
     "src/userland/mkdir.zig",
     "src/userland/rm.zig",
+    "src/userland/ln.zig",
 };
 
 fn execName(path: []const u8) []const u8 {

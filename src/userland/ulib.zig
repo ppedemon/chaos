@@ -58,6 +58,7 @@ pub extern fn open(path: [*:0]const u8, omode: u32) callconv(.C) i32;
 pub extern fn write(fd: u32, buf: [*]const u8, n: u32) callconv(.C) i32;
 pub extern fn mknod(path: [*:0]const u8, major: u32, minor: u32) callconv(.C) i32;
 pub extern fn unlink(path: [*:0]const u8) callconv(.C) i32;
+pub extern fn link(oldpath: [*:0]const u8, newpath: [*:0]const u8) callconv(.C) i32;
 pub extern fn mkdir(path: [*:0]const u8) callconv(.C) i32;
 pub extern fn close(fd: u32) callconv(.C) i32;
 
