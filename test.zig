@@ -279,12 +279,9 @@ pub fn main() !void {
     // @memcpy(static.buf[0..len], filename[0..len]);
     // const final: []const u8 = &static.buf;
     // std.debug.print("filename = |{s}|\n", .{final});
-    var name: [13:0]u8 = undefined;
-    @memset(name[0..name.len], 0);
-    const s = "hola.txt";
-    @memcpy(name[0..s.len], s);
-    std.debug.print("|{s}|\n", .{std.mem.sliceTo(&name, 0)});
-    std.debug.print("p = {*}, p[0] = {}", .{&name, (&name[0]).*});
+    const x: i8 = -4;
+    const y: u8 = @bitCast(x);
+    std.debug.print("{}\n", .{y});
 }
 
 const whitespace = " \t\r\n";

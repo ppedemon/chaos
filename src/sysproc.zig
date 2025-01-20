@@ -1,7 +1,8 @@
 const console = @import("console.zig");
-const err = @import("err.zig");
 const proc = @import("proc.zig");
 const syscall = @import("syscall.zig");
+
+const err = @import("share").err;
 
 pub fn sys_fork() err.SysErr!u32 {
     if (proc.fork()) |pid| {

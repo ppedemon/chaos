@@ -1,8 +1,9 @@
 const console = @import("console.zig");
-const err = @import("err.zig");
 const proc = @import("proc.zig");
 const sysfile = @import("sysfile.zig");
 const sysproc = @import("sysproc.zig");
+
+const err = @import("share").err;
 
 // TODO not going to be used? See if we can remove these constants in the future
 const SYS_fork = 1;
@@ -59,8 +60,6 @@ const syscalls = [_]*const fn () err.SysErr!u32{
     sysfile.sys_close,
 };
 
-const ERROR = 0xFFFF_FFFF; // That is, -1 when interpreted as a signed integer
-
 pub fn syscall() void {
     const curproc: *proc.Proc = proc.myproc() orelse @panic("syscall: no proc");
     const num = curproc.tf.eax;
@@ -68,12 +67,13 @@ pub fn syscall() void {
         if (syscalls[num]()) |result| {
             curproc.tf.eax = result;
         } else |syserr| {
-            console.cprintf("{} for syscall {}, setting eax = -1\n", .{ syserr, num });
-            curproc.tf.eax = ERROR;
+            const errno = -@as(i32, @intFromError(syserr));
+            console.cprintf("{} for syscall {}, setting eax = {}\n", .{ syserr, num, errno });
+            curproc.tf.eax = @bitCast(errno);
         }
     } else {
         console.cprintf("{d} {s}: unknow syscall {d}\n", .{ curproc.pid, curproc.name, num });
-        curproc.tf.eax = ERROR;
+        curproc.tf.eax = 0xFFFF_FFFF;
     }
 }
 

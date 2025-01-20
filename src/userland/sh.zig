@@ -1,19 +1,17 @@
 const ulib = @import("ulib.zig");
-const fcntl = @import("share").fcntl;
+const share = @import("share");
+const err = share.err;
+const fcntl = share.fcntl;
 
 const std = @import("std");
 
 fn panic(s: []const u8) noreturn {
-    ulib.fprint(ulib.stderr, "{s}\n", .{s});
+    ulib.fprint(ulib.stderr, "{s}\n", .{s}) catch unreachable;
     ulib.exit();
 }
 
-fn fork1() i32 {
-    const pid = ulib.fork();
-    if (pid < 0) {
-        panic("fork");
-    }
-    return pid;
+fn fork1() u32 {
+    return ulib.fork() catch panic("fork");
 }
 
 // -----------------------------------------------------------------------
@@ -39,8 +37,8 @@ const CmdExec = extern struct {
     argv: [MAXARGS]?[*:0]u8,
     alen: [MAXARGS]usize,
 
-    pub fn init() *Cmd {
-        const c: *CmdExec = @ptrFromInt(ulib.malloc(@sizeOf(CmdExec)));
+    pub fn init() err.SysErr!*Cmd {
+        const c: *CmdExec = @ptrFromInt(try ulib.malloc(@sizeOf(CmdExec)));
         c.kind = CmdKind.EXEC;
         return @ptrCast(c);
     }
@@ -54,8 +52,8 @@ const CmdRedir = extern struct {
     mode: u32,
     fd: u32,
 
-    pub fn init(subcmd: *Cmd, file: []u8, mode: u32, fd: u32) *Cmd {
-        const c: *CmdRedir = @ptrFromInt(ulib.malloc(@sizeOf(CmdRedir)));
+    pub fn init(subcmd: *Cmd, file: []u8, mode: u32, fd: u32) err.SysErr!*Cmd {
+        const c: *CmdRedir = @ptrFromInt(try ulib.malloc(@sizeOf(CmdRedir)));
         c.kind = CmdKind.REDIR;
         c.cmd = subcmd;
         c.file = @ptrCast(file.ptr);
@@ -71,8 +69,8 @@ const CmdPipe = extern struct {
     left: *Cmd,
     right: *Cmd,
 
-    pub fn init(leftcmd: *Cmd, rightcmd: *Cmd) *Cmd {
-        const c: *CmdPipe = @ptrFromInt(ulib.malloc(@sizeOf(CmdPipe)));
+    pub fn init(leftcmd: *Cmd, rightcmd: *Cmd) err.SysErr!*Cmd {
+        const c: *CmdPipe = @ptrFromInt(try ulib.malloc(@sizeOf(CmdPipe)));
         c.kind = CmdKind.PIPE;
         c.left = leftcmd;
         c.right = rightcmd;
@@ -85,8 +83,8 @@ const CmdList = extern struct {
     head: *Cmd,
     tail: *Cmd,
 
-    pub fn init(headcmd: *Cmd, tailcmd: *Cmd) *Cmd {
-        const c: *CmdList = @ptrFromInt(ulib.malloc(@sizeOf(CmdList)));
+    pub fn init(headcmd: *Cmd, tailcmd: *Cmd) err.SysErr!*Cmd {
+        const c: *CmdList = @ptrFromInt(try ulib.malloc(@sizeOf(CmdList)));
         c.kind = CmdKind.LIST;
         c.head = headcmd;
         c.tail = tailcmd;
@@ -98,78 +96,75 @@ const CmdBack = extern struct {
     kind: CmdKind,
     cmd: *Cmd,
 
-    pub fn init(subcmd: *Cmd) *Cmd {
-        const c: *CmdBack = @ptrFromInt(ulib.malloc(@sizeOf(CmdBack)));
+    pub fn init(subcmd: *Cmd) err.SysErr!*Cmd {
+        const c: *CmdBack = @ptrFromInt(try ulib.malloc(@sizeOf(CmdBack)));
         c.kind = CmdKind.BACK;
         c.cmd = subcmd;
         return @ptrCast(c);
     }
 };
 
-fn runcmd(cmd: *Cmd) noreturn {
+fn runcmd(cmd: *Cmd) !noreturn {
     switch (cmd.kind) {
         .EXEC => {
             const exec: *CmdExec = @ptrCast(cmd);
             if (exec.argv[0] == null) {
                 ulib.exit();
             }
-            _ = ulib.exec(exec.argv[0].?, &exec.argv);
-            ulib.fprint(2, "exec {s} failed\n", .{exec.argv[0].?});
+            try ulib.exec(exec.argv[0].?, &exec.argv);
+            try ulib.fprint(2, "exec {s} failed\n", .{exec.argv[0].?});
             ulib.exit();
         },
         .REDIR => {
             const redir: *CmdRedir = @ptrCast(cmd);
-            _ = ulib.close(redir.fd);
-            const newfd = ulib.open(redir.file, redir.mode);
-            if (newfd < 0) {
-                ulib.fprint(ulib.stderr, "open {s} failed\n", .{redir.file});
+            try ulib.close(redir.fd);
+            _ = ulib.open(redir.file, redir.mode) catch {
+                try ulib.fprint(ulib.stderr, "open {s} failed\n", .{redir.file});
                 ulib.exit();
-            }
-            runcmd(redir.cmd);
+            };
+            try runcmd(redir.cmd);
         },
         .PIPE => {
             const pipe: *CmdPipe = @ptrCast(cmd);
             var p: [2]u32 = undefined;
-            if (ulib.pipe(&p) < 0) {
-                panic("pipe");
-            }
+            ulib.pipe(&p) catch panic("pipe");
             if (fork1() == 0) {
                 // Left process: map write end of the pipe to stdout
-                _ = ulib.close(ulib.stdout);
-                _ = ulib.dup(p[1]);
-                _ = ulib.close(p[0]);
-                _ = ulib.close(p[1]);
-                runcmd(pipe.left);
+                try ulib.close(ulib.stdout);
+                _ = try ulib.dup(p[1]);
+                try ulib.close(p[0]);
+                try ulib.close(p[1]);
+                try runcmd(pipe.left);
             }
             if (fork1() == 0) {
                 // Right process: map read end of the pipe to stdin
-                _ = ulib.close(ulib.stdin);
-                _ = ulib.dup(p[0]);
-                _ = ulib.close(p[0]);
-                _ = ulib.close(p[1]);
-                runcmd(pipe.right);
+                try ulib.close(ulib.stdin);
+                _ = try ulib.dup(p[0]);
+                try ulib.close(p[0]);
+                try ulib.close(p[1]);
+                try runcmd(pipe.right);
             }
             // Parent process: wait for left and right to finish
-            _ = ulib.close(p[0]);
-            _ = ulib.close(p[1]);
-            _ = ulib.wait();
-            _ = ulib.wait();
+            try ulib.close(p[0]);
+            try ulib.close(p[1]);
+            _ = try ulib.wait();
+            _ = try ulib.wait();
             ulib.exit();
         },
         .BACK => {
             const back: *CmdBack = @ptrCast(cmd);
             if (fork1() == 0) {
-                runcmd(back.cmd);
+                try runcmd(back.cmd);
             }
             ulib.exit();
         },
         .LIST => {
             const list: *CmdList = @ptrCast(cmd);
             if (fork1() == 0) {
-                runcmd(list.head);
+                try runcmd(list.head);
             }
-            _ = ulib.wait();
-            runcmd(list.tail);
+            _ = try ulib.wait();
+            try runcmd(list.tail);
         },
     }
 }
@@ -228,16 +223,16 @@ fn gettok(input: *[]const u8, tok: ?*[]const u8) u8 {
     return ret;
 }
 
-fn parseexec(input: *[]u8) *Cmd {
+fn parseexec(input: *[]u8) err.SysErr!*Cmd {
     if (peek(input, "(")) {
         return parseblock(input);
     }
 
-    var ret = CmdExec.init();
+    var ret = try CmdExec.init();
     var cmd: *CmdExec = @ptrCast(ret);
 
     var argc: usize = 0;
-    ret = parseredirs(ret, input);
+    ret = try parseredirs(ret, input);
     while (!peek(input, "|)&;")) {
         var q: []u8 = undefined;
         const tok = gettok(input, &q);
@@ -253,7 +248,7 @@ fn parseexec(input: *[]u8) *Cmd {
         if (argc >= MAXARGS) {
             panic("too many args");
         }
-        ret = parseredirs(ret, input);
+        ret = try parseredirs(ret, input);
     }
     cmd.argv[argc] = null;
     cmd.alen[argc] = 0;
@@ -261,7 +256,7 @@ fn parseexec(input: *[]u8) *Cmd {
     return ret;
 }
 
-fn parseredirs(cmd: *Cmd, input: *[]u8) *Cmd {
+fn parseredirs(cmd: *Cmd, input: *[]u8) err.SysErr!*Cmd {
     var q: []u8 = undefined;
     var c = cmd;
     while (peek(input, "<>")) {
@@ -270,56 +265,56 @@ fn parseredirs(cmd: *Cmd, input: *[]u8) *Cmd {
             panic("missing file for redierection");
         }
         c = switch (tok) {
-            '<' => CmdRedir.init(c, q, fcntl.O_RDONLY, 0),
-            '>' => CmdRedir.init(c, q, fcntl.O_WRONLY | fcntl.O_CREATE, 1),
-            '+' => CmdRedir.init(c, q, fcntl.O_WRONLY | fcntl.O_CREATE, 1),
+            '<' => try CmdRedir.init(c, q, fcntl.O_RDONLY, 0),
+            '>' => try CmdRedir.init(c, q, fcntl.O_WRONLY | fcntl.O_CREATE, 1),
+            '+' => try CmdRedir.init(c, q, fcntl.O_WRONLY | fcntl.O_CREATE, 1),
             else => unreachable,
         };
     }
     return c;
 }
 
-fn parsepipe(input: *[]u8) *Cmd {
-    var cmd = parseexec(input);
+fn parsepipe(input: *[]u8) err.SysErr!*Cmd {
+    var cmd = try parseexec(input);
     if (peek(input, "|")) {
         _ = gettok(input, null);
-        cmd = CmdPipe.init(cmd, parsepipe(input));
+        cmd = try CmdPipe.init(cmd, try parsepipe(input));
     }
     return cmd;
 }
 
-fn parseline(input: *[]u8) *Cmd {
-    var cmd = parsepipe(input);
+fn parseline(input: *[]u8) err.SysErr!*Cmd {
+    var cmd = try parsepipe(input);
     while (peek(input, "&")) {
         _ = gettok(input, null);
-        cmd = CmdBack.init(cmd);
+        cmd = try CmdBack.init(cmd);
     }
     if (peek(input, ";")) {
         _ = gettok(input, null);
-        cmd = CmdList.init(cmd, parseline(input));
+        cmd = try CmdList.init(cmd, try parseline(input));
     }
     return cmd;
 }
 
-fn parseblock(input: *[]u8) *Cmd {
+fn parseblock(input: *[]u8) err.SysErr!*Cmd {
     if (!peek(input, "(")) {
         panic("parseblock");
     }
     _ = gettok(input, null);
-    var cmd = parseline(input);
+    var cmd = try parseline(input);
     if (!peek(input, ")")) {
         panic("syntax - missing )");
     }
     _ = gettok(input, null);
-    cmd = parseredirs(cmd, input);
+    cmd = try parseredirs(cmd, input);
     return cmd;
 }
 
-fn parsecmd(input: *[]u8) *Cmd {
-    const cmd = parseline(input);
+fn parsecmd(input: *[]u8) err.SysErr!*Cmd {
+    const cmd = try parseline(input);
     _ = peek(input, "");
     if (input.len != 0) {
-        ulib.print("leftover: {s}\n", .{input});
+        try ulib.print("leftover: {s}\n", .{input});
         panic("syntax");
     }
     nullterminate(cmd);
@@ -364,8 +359,8 @@ fn nullterminate(cmd: *Cmd) void {
 var buf: [128]u8 = undefined;
 
 fn getinput() []u8 {
-    ulib.puts("$ ");
-    return ulib.gets(&buf);
+    ulib.puts("$ ") catch unreachable;
+    return ulib.gets(&buf) catch unreachable;
 }
 
 fn parsedir(input: *[]u8) [*:0]const u8 {
@@ -391,16 +386,17 @@ export fn main() callconv(.C) void {
 
         if (std.mem.startsWith(u8, input, "cd ")) {
             const path = parsedir(@constCast(&input[2..]));
-            if (ulib.chdir(path) < 0) {
-                ulib.fprint(2, "cannot cd to: {s}\n", .{path});
-            }
+            ulib.chdir(path) catch {
+                ulib.fprint(2, "cannot cd to: {s}\n", .{path}) catch unreachable;
+            };
             continue;
         }
 
         if (fork1() == 0) {
-            runcmd(parsecmd(&input));
+            const cmd = parsecmd(&input) catch unreachable;
+            runcmd(cmd) catch unreachable;
         }
-        _ = ulib.wait();
+        _ = ulib.wait() catch unreachable;
     }
 
     ulib.exit();

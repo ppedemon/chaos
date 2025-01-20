@@ -3,35 +3,30 @@ const fcntl = @import("share").fcntl;
 
 var buf: [512]u8 = undefined;
 
-fn cat(fd: u32) void {
-    var n: i32 = ulib.read(fd, &buf, @sizeOf(@TypeOf(buf)));
-    while (n > 0) {
-        if (ulib.write(ulib.stdout, &buf, @as(u32, @intCast(n))) != n) {
-            ulib.fputs(ulib.stderr, "cat: write error\n");
+fn cat(fd: u32) !void {
+    while (ulib.read(fd, &buf, @sizeOf(@TypeOf(buf)))) |n| {
+        if (try ulib.write(ulib.stdout, &buf, @as(u32, @intCast(n))) != n) {
+            try ulib.fputs(ulib.stderr, "cat: write error\n");
             ulib.exit();
         }
-        n = ulib.read(fd, &buf, @sizeOf(@TypeOf(buf)));
-    }
-    if (n < 0) {
-        ulib.fputs(ulib.stderr, "cat: read error\n");
+    } else |_| {
+        try ulib.fputs(ulib.stderr, "cat: read error\n");
         ulib.exit();
     }
 }
 
 export fn main(argc: u32, argv: [*][*:0]const u8) void {
     if (argc <= 1) {
-        cat(ulib.stdin);
+        cat(ulib.stdin) catch unreachable;
         ulib.exit();
     }
     for (1..argc) |i| {
-        const result = ulib.open(argv[i], fcntl.O_RDONLY);
-        if (result < 0) {
-            ulib.fprint(ulib.stderr, "cat: cannot open {s}\n", .{argv[i]});
+        const fd = ulib.open(argv[i], fcntl.O_RDONLY) catch {
+            ulib.fprint(ulib.stderr, "cat: cannot open {s}\n", .{argv[i]}) catch unreachable;
             ulib.exit();
-        }
-        const fd: u32 = @intCast(result);
-        cat(@intCast(fd));
-        _ = ulib.close(fd);
+        };
+        cat(fd) catch unreachable;
+        ulib.close(fd) catch unreachable;
     }
     ulib.exit();
 }

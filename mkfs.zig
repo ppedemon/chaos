@@ -143,7 +143,7 @@ fn wstruct(value: anytype, buf: []u8) !void {
 
 fn rstruct(comptime T: type, buf: []const u8) !T {
     var stream = std.io.fixedBufferStream(buf);
-    return try stream.reader().readStructEndian(T, .little);
+    return stream.reader().readStructEndian(T, .little);
 }
 
 fn rsect(sect: usize, buf: []u8) !void {
@@ -166,7 +166,7 @@ fn rinode(inum: u32) !fs.DiskInode {
     var buf: [fs.BSIZE]u8 = undefined;
     const blocknum = fs.iblock(inum, &static.sb);
     try rsect(blocknum, &buf);
-    return try rstruct(fs.DiskInode, buf[@sizeOf(fs.DiskInode) * (inum % fs.IPB) ..]);
+    return rstruct(fs.DiskInode, buf[@sizeOf(fs.DiskInode) * (inum % fs.IPB) ..]);
 }
 
 fn winode(inum: u32, ip: *fs.DiskInode) !void {

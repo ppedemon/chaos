@@ -1,6 +1,5 @@
 const console = @import("console.zig");
 const dir = @import("dir.zig");
-const err = @import("err.zig");
 const exec = @import("exec.zig");
 const file = @import("file.zig");
 const fs = @import("fs.zig");
@@ -12,6 +11,8 @@ const string = @import("string.zig");
 const syscall = @import("syscall.zig");
 
 const std = @import("std");
+
+const err = @import("share").err;
 const fcntl = @import("share").fcntl;
 const stat = @import("share").stat;
 

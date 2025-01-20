@@ -1,7 +1,6 @@
 const console = @import("console.zig");
 const dir = @import("dir.zig");
 const elf = @import("elf.zig");
-const err = @import("err.zig");
 const fs = @import("fs.zig");
 const log = @import("log.zig");
 const mmu = @import("mmu.zig");
@@ -11,6 +10,7 @@ const string = @import("string.zig");
 const vm = @import("vm.zig");
 
 const std = @import("std");
+const err = @import("share").err;
 
 pub fn exec(path: []const u8, argv: []const []const u8) err.SysErr!u32 {
     var ip: *fs.Inode = undefined;

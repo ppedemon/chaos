@@ -1,3 +1,4 @@
+const err = @import("share").err;
 const ulib = @import("ulib.zig");
 
 const Header = extern struct {
@@ -48,22 +49,17 @@ pub fn free(ap: usize) void {
     freep = p;
 }
 
-fn morecore(nu: usize) ?*Header {
+fn morecore(nu: usize) err.SysErr!?*Header {
     const units = @max(4096, nu);
 
-    const p = ulib.sbrk(@intCast(units * @sizeOf(Header)));
-    if (p == -1) {
-        return null;
-    }
-
-    const up = @as(usize, @intCast(p));
-    var hp: *Header = @alignCast(@as(*Header, @ptrFromInt(up)));
+    const p = try ulib.sbrk(@intCast(units * @sizeOf(Header)));
+    var hp: *Header = @alignCast(@as(*Header, @ptrFromInt(p)));
     hp.size = units;
     free(@intFromPtr(many(hp) + 1));
     return freep;
 }
 
-pub fn malloc(nbytes: usize) usize {
+pub fn malloc(nbytes: usize) err.SysErr!usize {
     const nunits = (nbytes + @sizeOf(Header) - 1) / @sizeOf(Header) + 1;
 
     if (freep == null) {
@@ -89,7 +85,7 @@ pub fn malloc(nbytes: usize) usize {
             return @intFromPtr(many(p) + 1);
         }
         if (p == freep) {
-            p = morecore(nunits) orelse return 0;
+            p = try morecore(nunits) orelse return 0;
         }
     }
 }
