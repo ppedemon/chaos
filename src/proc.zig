@@ -444,6 +444,23 @@ pub fn growproc(n: isize) bool {
     return true;
 }
 
+pub fn kill(pid: u32) bool {
+    ptable.lock.acquire();
+    defer ptable.lock.release();
+
+    for (&ptable.proc) |*p| {
+        if (p.pid == pid) {
+            p.killed = true;
+            if (p.state == .SLEEPING) {
+                p.state = .RUNNABLE;
+            }
+            return true;
+        }
+    }
+
+    return false;
+}
+
 pub fn procdump() void {
     for (&ptable.proc) |*p| {
         if (p.state == ProcState.UNUSED) {

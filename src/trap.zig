@@ -53,7 +53,7 @@ pub const IRQ_SPURIOUS = 31;
 var idt: [256]mmu.GateDesc = undefined;
 extern const vectors: u32;
 
-var tickslock = spinlock.SpinLock.init("timer");
+pub var tickslock = spinlock.SpinLock.init("timer");
 pub var ticks: u32 = 0;
 
 pub fn tvinit() void {

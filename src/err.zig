@@ -13,4 +13,6 @@ pub const SysErr = error{
     ErrMaxOpen, // Reached max open files per process limit
     ErrNoEnt, // Invalid path passed to sys call
     ErrArgs, // Too many args to exec sys call
+    ErrSrch, // Process to kill or put ot sleep not found
+    ErrIntr, // Process killed while sleeping
 };
