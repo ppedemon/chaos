@@ -53,7 +53,7 @@ const syscalls = [_]*const fn () err.SysErr!u32{
     sysfile.sys_open,
     sysfile.sys_write,
     sysfile.sys_mknod,
-    unimplemented,
+    sysfile.sys_unlink,
     unimplemented,
     sysfile.sys_mkdir,
     sysfile.sys_close,

@@ -90,6 +90,20 @@ fn create(path: []const u8, ty: u16, major: u16, minor: u16) err.SysErr!*fs.Inod
     return err.SysErr.ErrNoEnt;
 }
 
+fn isdirempty(dp: *fs.Inode) bool {
+    var dirent: fs.DirEnt = undefined;
+    var off: usize = 2 * @sizeOf(fs.DirEnt);
+    while (off < dp.size) : (off += @sizeOf(fs.DirEnt)) {
+        if (dp.readi(std.mem.asBytes(&dirent), off, @sizeOf(fs.DirEnt)) != @sizeOf(fs.DirEnt)) {
+            @panic("isdirempty: readi");
+        }
+        if (dirent.inum != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 pub fn sys_pipe() err.SysErr!u32 {
     var buf: []u8 = undefined;
     try syscall.argptr(0, &buf, @sizeOf([2]u32));
@@ -282,6 +296,58 @@ pub fn sys_mknod() err.SysErr!u32 {
     );
     ip.iunlockput();
     return 0;
+}
+
+pub fn sys_unlink() err.SysErr!u32 {
+    var path: []u8 = undefined;
+    try syscall.argstr(0, &path);
+
+    log.begin_op();
+    defer log.end_op();
+
+    var name: [fs.DIRSIZE:0]u8 = undefined;
+    if (dir.nameiparent(path, &name)) |dp| {
+        dp.ilock();
+        defer dp.iunlockput();
+
+        const cname: [:0]u8 = @as([:0]u8, @ptrCast(&name));
+        if (dir.namecmp(cname, ".") or dir.namecmp(cname, "..")) {
+            return err.SysErr.ErrIsDir;
+        }
+
+        var off: u32 = undefined;
+        const fname: []u8 = string.safeslice(cname);
+        if (dir.dirlookup(dp, fname, &off)) |ip| {
+            ip.ilock();
+            defer ip.iunlockput();
+
+            if (ip.nlink < 1) {
+                @panic("unlink: link < 1");
+            }
+            if (ip.ty == stat.T_DIR and !isdirempty(ip)) {
+                return err.SysErr.ErrIsDir;
+            }
+
+            var de: fs.DirEnt = undefined;
+            const slice = std.mem.asBytes(&de); 
+            @memset(slice, 0);
+            if (dp.writei(slice, off, @sizeOf(fs.DirEnt)) != @sizeOf(fs.DirEnt)) {
+                @panic("unlink: writei");
+            }
+            if (ip.ty == stat.T_DIR) {
+                dp.nlink -= 1; // dp lost a child referencing it via ".."
+                dp.iupdate();
+            }
+
+            ip.nlink -= 1;
+            ip.iupdate();
+
+            return 0;
+        }
+    }
+
+    //No parent inode or inode for the file we intend to delete
+    return err.SysErr.ErrNoEnt;
 }
 
 pub fn sys_mkdir() err.SysErr!u32 {

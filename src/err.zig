@@ -5,6 +5,7 @@ pub const SysErr = error{
     ErrBadFd, // Invalid file handle
     ErrInval, // Invalid agr combination. For example, opening a folder with eec permissions.
     ErrNotDir, // Path isn't a directory
+    ErrIsDir, // Path is a directory
     ErrNoExec, // File is not a valid ELF executable
     ErrNoFile, // File to execute not found
     ErrNoMem, // Not enough memory to handle syscall
