@@ -87,16 +87,13 @@ pub fn popcli() void {
 }
 
 pub fn getpcs(pcs: []usize) void {
-    var ebp: usize = asm volatile ("mov %ebp, %eax"
-        : [result] "={eax}" (-> u32),
-    );
-
+    var ebp = @frameAddress();
     var first = true;
     var i: usize = 0;
 
     // 0xFFFF_FFFF is a sentinel ebp value denoting the bottom of the kernel stack.
     // See start() in entry.zig
-    while (ebp >= memlayout.KERNBASE and ebp != 0xFFFF_FFFF and i < pcs.len) : (i += 1) {
+    while (ebp >= memlayout.KERNBASE and ebp != 0xFFFF_FFFF and ebp % 4 == 0 and i < pcs.len) : (i += 1) {
         const p: [*]const usize = @ptrFromInt(ebp);
 
         ebp = p[0];
@@ -107,6 +104,11 @@ pub fn getpcs(pcs: []usize) void {
             pcs[i] = p[1];
         }
     }
+
+    if (ebp >= memlayout.KERNBASE and ebp != 0xFFFF_FFFF and ebp % 4 != 0) {
+        console.cputs("ebp not 4-byte aligned, something is really wrong the memory\n!");
+    }
+
     while (i < pcs.len) : (i += 1) {
         pcs[i] = 0;
     }
