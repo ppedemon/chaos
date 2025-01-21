@@ -32,7 +32,7 @@ On execution you will find a console executing a shell. The console supports scr
 
 In addition, the shell supports:
 
-  * Redirecting `stdin` and `stdout`: `cat < ls > out.txt`.
+  * Redirecting `stdin` and `stdout`: `cat < in.txt > out.txt`.
   * Piping: `ls | grep zombie | wc`
   * Sequencing: `sleep 100 ; echo Done sleeping`
   * Background: `(sleep 100; echo Done seeping) & ; cat`
