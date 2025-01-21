@@ -12,6 +12,9 @@ const userProgs = [_][]const u8{
     "src/userland/ln.zig",
     "src/userland/kill.zig",
     "src/userland/grep.zig",
+    "src/userland/wc.zig",
+    "src/userland/zombie.zig",
+    "src/userland/sleep.zig",
 };
 
 fn execName(path: []const u8) []const u8 {
