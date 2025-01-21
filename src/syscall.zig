@@ -68,11 +68,12 @@ pub fn syscall() void {
         if (syscalls[num]()) |result| {
             curproc.tf.eax = result;
         } else |syserr| {
+            // TODO Remove printing to console in case of syscall error
             console.cprintf("{} for syscall {}, setting eax = -1\n", .{ syserr, num });
             curproc.tf.eax = ERROR;
         }
     } else {
-        console.cprintf("{d} {s}: unknow syscall {d}\n", .{ curproc.pid, curproc.name, num });
+        console.cprintf("{d} {s}: unknown syscall {d}\n", .{ curproc.pid, curproc.name, num });
         curproc.tf.eax = ERROR;
     }
 }
