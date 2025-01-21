@@ -279,8 +279,8 @@ pub fn main() !void {
     // @memcpy(static.buf[0..len], filename[0..len]);
     // const final: []const u8 = &static.buf;
     // std.debug.print("filename = |{s}|\n", .{final});
-    const t = "";
-    std.debug.print("|{s}|\n", .{t[0..]});
+    const n: u32 = 4096;
+    std.debug.print("{x}, {x}\n", .{n +| 0xFFFF_FFFF, n +% 0xFFFF_FFFF});
 }
 
 const whitespace = " \t\r\n";

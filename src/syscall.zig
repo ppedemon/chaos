@@ -115,7 +115,7 @@ pub fn argptr(n: usize, pp: *[]const u8, size: usize) err.SysErr!void {
 
     var addr: u32 = undefined;
     try argint(n, &addr);
-    if (size < 0 or addr > p.sz or addr + size > p.sz) {
+    if (size < 0 or addr > p.sz or addr +| size > p.sz) {
         return err.SysErr.ErrFault;
     }
 

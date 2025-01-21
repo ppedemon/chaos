@@ -355,13 +355,13 @@ pub const Inode = struct {
             return file.devsw[self.major].read(self, dst, n);
         }
 
-        if (offset > self.size or offset + n < offset) {
+        if (offset > self.size or offset +% n < offset) {
             return null;
         }
 
         var off = offset;
         var limit = n;
-        if (off + limit > self.size) {
+        if (off +| limit > self.size) {
             limit = self.size - off;
         }
 
@@ -390,7 +390,7 @@ pub const Inode = struct {
             return file.devsw[self.major].write(self, src, n);
         }
 
-        if (offset > self.size or offset + n < offset) {
+        if (offset > self.size or offset +% n < offset) {
             return null;
         }
         if (offset + n > MAXFILE * BSIZE) {

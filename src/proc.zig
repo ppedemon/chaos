@@ -423,7 +423,7 @@ pub fn exit() void {
 pub fn growproc(n: isize) bool {
     const curproc: *Proc = myproc() orelse @panic("growproc: no process");
     const sz = curproc.sz;
-    var newsz: usize = undefined;
+    var newsz: usize = sz;
 
     const sz0: usize = @intCast(@as(isize, @intCast(sz)) + n);
 
