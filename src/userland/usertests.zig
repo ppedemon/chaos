@@ -279,6 +279,60 @@ fn fourfiles() void {
     ulib.puts("fourfiles ok\n");
 }
 
+fn sharedfd() void {
+    var data: [10]u8 = undefined;
+
+    ulib.puts("sharedfd test\n");
+
+    _ = ulib.unlink("sharedfd");
+    var fd = ulib.open("sharedfd", fcntl.O_CREATE | fcntl.O_RDWR);
+    if (fd < 0) {
+        ulib.fputs(ulib.stderr, "cannot open sharedfd for writing");
+        return;
+    }
+    const pid = ulib.fork();
+    @memset(&data, if (pid == 0) 'c' else 'p');
+    for (0..1000) |_| {
+        if (ulib.write(@intCast(fd), @ptrCast(&data), @sizeOf(@TypeOf(data))) != @sizeOf(@TypeOf(data))) {
+            ulib.fputs(ulib.stderr, "write sharedfd failed\n");
+            break;
+        }
+    }
+
+    if (pid == 0) {
+        ulib.exit();
+    } else {
+        _ = ulib.wait();
+    }
+
+    _ = ulib.close(@intCast(fd));
+    fd = ulib.open("sharedfd", fcntl.O_RDONLY);
+    if (fd < 0) {
+        ulib.fputs(ulib.stderr, "cannot open sharedfd for reading\n");
+        return;
+    }
+    var nc: u32 = 0;
+    var np: u32 = 0;
+    while (ulib.read(@intCast(fd), @ptrCast(&data), @sizeOf(@TypeOf(data))) > 0) {
+        for (data) |c| {
+            if (c == 'c') {
+                nc += 1;
+            } else if (c == 'p') {
+                np += 1;
+            }
+        }
+    }
+
+    _ = ulib.close(@intCast(fd));
+    _ = ulib.unlink("sharedfd");
+    if (nc == 10_000 and np == 10_000) {
+        ulib.puts("sharedfd ok\n");
+    } else {
+        ulib.print("sharedfd oops {} {}\n", .{nc, np});
+        ulib.exit();
+    }
+}
+
 pub export fn main() void {
     ulib.puts("usertests starting\n");
 
@@ -293,6 +347,7 @@ pub export fn main() void {
     linkunlink();
     concreate();
     fourfiles();
+    sharedfd();
 
     ulib.exit();
 }
