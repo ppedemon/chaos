@@ -490,10 +490,6 @@ fn procpcs(proc: *Proc, pcs: []usize) void {
         pcs[i] = p[1];
     }
 
-    if (ebp >= memlayout.KERNBASE and ebp != 0xFFFF_FFFF and ebp % 4 != 0) {
-        console.cputs("proc: ebp not 4-byte aligned, something is really wrong the memory!\n");
-    }
-
     while (i < pcs.len) : (i += 1) {
         pcs[i] = 0;
     }
