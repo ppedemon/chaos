@@ -5,6 +5,7 @@ const mmu = @import("mmu.zig");
 const lapic = @import("lapic.zig");
 const proc = @import("proc.zig");
 const spinlock = @import("spinlock.zig");
+const string = @import("string.zig");
 const syscall = @import("syscall.zig");
 const uart = @import("uart.zig");
 const x86 = @import("x86.zig");
@@ -126,7 +127,7 @@ export fn trap(tf: *x86.TrapFrame) callconv(.C) void {
                 // Some userland app trapped
                 console.cprintf("pid {d} {s}: trap {d} err {d} on cpu {d} eip = {x} addr = 0x{x} (killing)\n", .{
                     proc.myproc().?.pid,
-                    proc.myproc().?.name,
+                    string.safeslice(&proc.myproc().?.name),
                     tf.trapno,
                     tf.err,
                     proc.cpuid(),

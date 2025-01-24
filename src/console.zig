@@ -39,6 +39,11 @@ pub fn consclear() void {
 }
 
 pub fn cputs(msg: []const u8) void {
+    if (cons.locking and !cons.lock.holding()) {
+        cons.lock.acquire();
+        defer cons.lock.release();
+    }
+
     for (msg) |c| {
         consputc(c);
     }

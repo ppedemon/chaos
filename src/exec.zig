@@ -35,7 +35,6 @@ pub fn exec(path: []const u8, argv: []const []const u8) err.SysErr!u32 {
 
     ip = dir.namei(path) orelse {
         log.end_op();
-        console.cprintf("exec: {s} not found", .{path});
         return err.SysErr.ErrNoFile;
     };
     cleanup_ip = true;
@@ -65,7 +64,7 @@ pub fn exec(path: []const u8, argv: []const []const u8) err.SysErr!u32 {
         if (ph.memsz < ph.filesz) {
             return err.SysErr.ErrNoExec;
         }
-        if (ph.vaddr + ph.memsz < ph.vaddr) {
+        if (ph.vaddr +% ph.memsz < ph.vaddr) {
             return err.SysErr.ErrNoExec;
         }
         sz = vm.allocuvm(pgdir, sz, ph.vaddr + ph.memsz);

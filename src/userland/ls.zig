@@ -5,14 +5,20 @@ const share = @import("share");
 const fcntl = share.fcntl;
 const stat = share.stat;
 
-// Hack: duplicated from src/fs.zig 
+// Hack: duplicated from src/fs.zig
 pub const DIRSIZE = 13;
 
-// Hack: duplicated from src/fs.zig 
+// Hack: duplicated from src/fs.zig
 pub const DirEnt = extern struct {
     inum: u16,
     name: [DIRSIZE:0]u8,
 };
+
+pub fn safeslice(s: [:0]u8) []const u8 {
+    var i: usize = 0;
+    while (s[i] != 0 and i < s.len) : (i += 1) {}
+    return s[0..i];
+}
 
 // Global buffers
 var namebuf: [DIRSIZE + 1]u8 = undefined;
@@ -63,7 +69,7 @@ fn ls(path: [*:0]const u8) void {
                         continue;
                     }
 
-                    const name: []const u8 = std.mem.sliceTo(&de.name, 0);
+                    const name = safeslice(&de.name);
                     var fname: []u8 = pathbuf[0 .. slice.len + 1 + name.len + 1];
                     @memcpy(fname[slice.len + 1 .. slice.len + 1 + name.len], name);
                     fname[fname.len - 1] = 0;

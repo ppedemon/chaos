@@ -279,9 +279,11 @@ pub fn main() !void {
     // @memcpy(static.buf[0..len], filename[0..len]);
     // const final: []const u8 = &static.buf;
     // std.debug.print("filename = |{s}|\n", .{final});
-    const n: u32 = 4096;
-    std.debug.print("{x}, {x}\n", .{n +| 0xFFFF_FFFF, n +% 0xFFFF_FFFF});
+    const is_bss = std.mem.allEqual(u8, &uninit, 0);
+    std.debug.print("all zeros = {}\n", .{is_bss});
 }
+
+var uninit: [10000]u8 = undefined;
 
 const whitespace = " \t\r\n";
 const symbols = "<|>&;()";

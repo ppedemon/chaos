@@ -23,7 +23,7 @@ pub fn uartinit() void {
     // 8 bits chars, 1 stop bit
     x86.out(COM1 + 3, @as(u8, 0x03));
 
-    // Zero-out modem state, enable interrups on receied data available
+    // Zero-out modem state, enable interrups on received data available
     x86.out(COM1 + 4, @as(u8, 0));
     x86.out(COM1 + 1, @as(u8, 0x01));
 
