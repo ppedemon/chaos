@@ -59,6 +59,7 @@ pub fn exec(path: []const u8, argv: []const []const u8) err.SysErr!u32 {
             return err.SysErr.ErrIO;
         }
         if (ph.ty != elf.ELF_PROG_LOAD) {
+            off += @sizeOf(elf.ProgHdr);
             continue;
         }
         if (ph.memsz < ph.filesz) {
