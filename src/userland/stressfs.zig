@@ -33,5 +33,11 @@ pub export fn main() void {
     }
     _ = ulib.close(@intCast(fd));
 
+    if (i == 4) {
+        for (0..4) |_| {
+            _ = ulib.wait();
+        }
+    }
+
     ulib.exit();
 }
