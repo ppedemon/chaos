@@ -4,29 +4,6 @@ const proc = @import("proc.zig");
 const sysfile = @import("sysfile.zig");
 const sysproc = @import("sysproc.zig");
 
-// TODO not going to be used? See if we can remove these constants in the future
-const SYS_fork = 1;
-const SYS_exit = 2;
-const SYS_wait = 3;
-const SYS_pipe = 4;
-const SYS_read = 5;
-const SYS_kill = 6;
-const SYS_exec = 7;
-const SYS_fstat = 8;
-const SYS_chdir = 9;
-const SYS_dup = 10;
-const SYS_getpid = 11;
-const SYS_sbrk = 12;
-const SYS_sleep = 13;
-const SYS_uptime = 14;
-const SYS_open = 15;
-const SYS_write = 16;
-const SYS_mknod = 17;
-const SYS_unlink = 18;
-const SYS_link = 19;
-const SYS_mkdir = 20;
-const SYS_close = 21;
-
 fn unimplemented() err.SysErr!u32 {
     const p: *proc.Proc = proc.myproc() orelse @panic("fetchint: no process");
     const n = p.tf.eax;
@@ -68,8 +45,6 @@ pub fn syscall() void {
         if (syscalls[num]()) |result| {
             curproc.tf.eax = result;
         } else |_| {
-            // TODO Remove printing to console in case of syscall error
-            //console.cprintf("{} for syscall {}, setting eax = -1\n", .{ syserr, num });
             curproc.tf.eax = ERROR;
         }
     } else {
