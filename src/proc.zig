@@ -88,7 +88,7 @@ pub fn mycpu() *CPU {
 }
 
 pub fn cpuid() u32 {
-    return (@intFromPtr(&mp.cpus) - @intFromPtr(mycpu())) / @sizeOf(CPU);
+    return ((@intFromPtr(mycpu()) - @intFromPtr(&mp.cpus[0]))) / @sizeOf(CPU);
 }
 
 // Disable interrupts, so no scheduling happens while reading the proc from the CPU

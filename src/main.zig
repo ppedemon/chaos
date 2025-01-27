@@ -10,23 +10,21 @@ const lapic = @import("lapic.zig");
 const memlayout = @import("memlayout.zig");
 const mmu = @import("mmu.zig");
 const mp = @import("mp.zig");
+const param = @import("param.zig");
 const picirq = @import("picirq.zig");
 const proc = @import("proc.zig");
 const spinlock = @import("spinlock.zig");
+const string = @import("string.zig");
 const trap = @import("trap.zig");
 const uart = @import("uart.zig");
 const vm = @import("vm.zig");
 const x86 = @import("x86.zig");
 
+const entryother: []const u8 = @embedFile("mp/entryother.bin");
+
 const kstacksize = @import("param.zig").KSTACKSIZE;
 
 extern const end: u8;
-
-
-// fn readstack(esp: usize) usize {
-//     const p: *const usize = @ptrFromInt(esp);
-//     return p.*;
-// }
 
 // Install global panic function: this will be called by @panic(msg)
 pub fn panic(msg: []const u8, _: ?*builtin.StackTrace, _: ?usize) noreturn {
@@ -49,62 +47,46 @@ export fn main() align(16) noreturn {
     trap.tvinit();
     bio.binit();
     ide.ideinit();
-    // TODO startothers()
+    startothers();
     kalloc.kinit2(memlayout.p2v(4 * 1024 * 1024), memlayout.p2v(memlayout.PHYSTOP));
     proc.userinit();
     mpmain();
     unreachable;
-
-    // var len: usize = 0;
-    // var p = kalloc.kmem.freelist;
-    // while (p) |curr| {
-    //     len += 1;
-    //     p = curr.next;
-    // }
-
-    // const cpu = proc.mycpu();
-
-    // console.cprintf("Chaos started!\n", .{});
-    // console.cprintf("Kernel end addr = 0x{x}\n", .{end_addr});
-    // console.cprintf("Free pages = {d}\n", .{len});
-    // console.cprintf("# of CPUs = {d}\n", .{mp.ncpu});
-    // console.cprintf("LAPIC addr = 0x{x}\n", .{@intFromPtr(lapic.lapic)});
-    // console.cprintf("Current CPU id = {d}\n", .{cpu.apicid});
-    // console.cprintf("GDT addr = 0x{x}\n", .{@intFromPtr(&cpu.gdt)});
-    // console.cprintf("GDT size = {d}\n", .{@sizeOf(@TypeOf(cpu.gdt))});
-
-    // const popt = proc.allocproc();
-    // if (popt) |pr| {
-    //     console.cprintf("Jumping to: 0x{x}\n", .{pr.context.eip});
-    //     const kp = @as([*]const usize, @ptrFromInt(pr.kstack));
-    //     const ret = kp[(4096 - @sizeOf(x86.TrapFrame)) / @sizeOf(usize) - 1];
-    //     console.cprintf("Returning to: 0x{x}\n", .{ret});
-    // }
-
-    //x86.sti();
-
-    // fs.readsb(0, &fs.superblock);
-    // for (0..1_000_000) |_| {}
-    // _ = fs.ialloc(0, 1);
-
-    // for (proc.initcode, 0..) |c, i| {
-    //     console.cprintf("{x:0>2} ", .{c});
-    //     if ((i + 1) % 16 == 0) {
-    //         console.cprintf("\n", .{});
-    //     } else if ((i+1) % 8 == 0) {
-    //         console.cprintf("    ", .{});
-    //     }
-    // }
-
-    //while (true) {}
 }
 
 fn mpmain() void {
-    console.consclear();
     console.cprintf("cpu #{d}: starting\n", .{proc.cpuid()});
     trap.idtinit();
     @atomicStore(bool, &proc.mycpu().started, true, builtin.AtomicOrder.seq_cst);
     proc.scheduler();
+}
+
+fn mpenter() void {
+    vm.switchkvm();
+    vm.seginit();
+    lapic.lapicinit();
+    mpmain();
+}
+
+fn startothers() void {
+    const code: u32 = memlayout.p2v(0x7000);
+    string.memmove(code, @intFromPtr(&entryother[0]), entryother.len);
+
+    var i: u8 = 0;
+    while (i < mp.ncpu) : (i += 1) {
+        const cpu = &mp.cpus[i];
+        if (cpu == proc.mycpu()) {
+            continue;
+        }
+
+        const stack: usize = kalloc.kalloc() orelse @panic("no mem for extra cpu stack");
+        @as(*usize, @ptrFromInt(code - 4)).* = stack + param.KSTACKSIZE;
+        @as(*usize, @ptrFromInt(code - 8)).* = @intFromPtr(&mpenter);
+        @as(*usize, @ptrFromInt(code - 12)).* = memlayout.v2p(@intFromPtr(&entrypgdir[0]));
+        lapic.lapitstartap(cpu.apicid, memlayout.v2p(code));
+
+        while (!cpu.started) {}
+    }
 }
 
 export const entrypgdir: [mmu.NPDENTRIES]u32 align(mmu.PGSIZE) = init: {

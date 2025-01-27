@@ -1,7 +1,10 @@
 //! Recommended readig to understand how to program the LAPIC unit:
 //!   - https://wiki.osdev.org/APIC#Local_Vector_Table_Registers
 
+const memlayout = @import("memlayout.zig");
+const string = @import("string.zig");
 const trap = @import("trap.zig");
+const x86 = @import("x86.zig");
 
 // LAPIC registers, divided by 4 for indexing a []u32
 const ID = 0x0020 / @sizeOf(u32); // ID
@@ -108,3 +111,39 @@ pub fn lapiceoi() void {
 }
 
 pub fn microdelay(_: u32) void {}
+
+const CMOS_PORT = 0x70;
+
+pub fn lapitstartap(apicid: u16, addr: u32) void {
+    // Set CMOS shutdown code = 0x0A
+    x86.out(CMOS_PORT, @as(u8, 0x0F));
+    x86.out(CMOS_PORT + 1, @as(u8, 0x0A));
+
+    // Warm reset vector at 0x40:0x67 must point at the AP startup code
+    const pa = @as(u16, @intCast(addr)) >> 4;
+    const wrv: [*]u8 = @ptrFromInt(memlayout.p2v(0x40 << 4 | 0x67));
+
+    // NOTE Zig panics when trying to write an u16 to 0x40:0x67, a non-aligned
+    // destination address. So hacky hacky, we write one byte at the time.
+    // Mind endianness!
+    wrv[0] = 0;
+    wrv[1] = 0;
+    wrv[2] = @intCast(pa & 0xFF);
+    wrv[3] = @intCast(pa >> 8);
+
+    // Universal startup algorithm:
+    // Sent INIT (level triggered interrupt) to reset the other CPU
+    lapicw(ICRHI, @as(u32, apicid) << 24);
+    lapicw(ICRLO, INIT | LEVEL | ASSERT);
+    microdelay(200);
+    lapicw(ICRLO, INIT | LEVEL);
+    microdelay(100);
+
+    // Sent STARTUP inter-processor-interrupt to enter code in addr from the other cpu
+    // The Intel algorithm states to send the interrupt twice, hence the loop below
+    for (0..2) |_| {
+        lapicw(ICRHI, @as(u32, apicid) << 24);
+        lapicw(ICRLO, STARTUP | (addr >> 12));
+        microdelay(200);
+    }
+}

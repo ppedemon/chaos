@@ -43,9 +43,7 @@ fn idewait(checkerr: bool) ?void {
 }
 
 pub fn ideinit() void {
-    // TODO Assign IQR_IDE to last CPU when we activte all of them. For now, direct to to CPU #0 as the rest.
-    //ioapic.ioapicenable(trap.IRQ_IDE, mp.ncpu);
-    ioapic.ioapicenable(trap.IRQ_IDE, 0);
+    ioapic.ioapicenable(trap.IRQ_IDE, mp.ncpu - 1);
 
     // Check if disk #0 is present
     x86.out(0x1F6, @as(u8, 0xE0 | 0 << 4));

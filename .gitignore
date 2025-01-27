@@ -2,7 +2,6 @@
 zig-out/
 
 src/init/initcode.bin
+src/mp/entryother.bin
 
 fs.img
-init
-sh

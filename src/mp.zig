@@ -7,6 +7,8 @@ const param = @import("param.zig");
 const proc = @import("proc.zig");
 const x86 = @import("x86.zig");
 
+const std = @import("std");
+
 pub var cpus: [param.NCPU]proc.CPU = undefined;
 pub var ncpu: u8 = 0;
 pub var ioapicid: u8 = 0;
@@ -169,6 +171,7 @@ pub fn mpinit() void {
             .MPPROC => {
                 const proc_entry: *MPProc = @ptrFromInt(p);
                 if (ncpu < param.NCPU) {
+                    @memset(std.mem.asBytes(&cpus[ncpu]), 0);
                     cpus[ncpu].apicid = proc_entry.apicid;
                     ncpu += 1;
                 }

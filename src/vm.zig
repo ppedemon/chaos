@@ -41,10 +41,7 @@ extern fn set_segregs() void;
 
 pub fn seginit() void {
     var cpu = proc.mycpu();
-    if (proc.cpuid() != 0) {
-        @panic("segint: not running on cpu #0");
-    }
-
+    
     cpu.gdt[mmu.SEG_KCODE] = mmu.SegDesc.new(mmu.STA_X | mmu.STA_R, 0, 0xFFFF_FFFF, mmu.DPL_KERNEL);
     cpu.gdt[mmu.SEG_KDATA] = mmu.SegDesc.new(mmu.STA_W, 0, 0xFFFF_FFFF, mmu.DPL_KERNEL);
     cpu.gdt[mmu.SEG_UCODE] = mmu.SegDesc.new(mmu.STA_X | mmu.STA_R, 0, 0xFFFF_FFFF, mmu.DPL_USER);

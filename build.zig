@@ -151,13 +151,40 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = .ReleaseSmall,
     });
-    initCode.setLinkerScriptPath(b.path("src/init/initcode.ld"));
 
     const initCodeBin = b.addObjCopy(initCode.getEmittedBin(), .{
         .basename = "initcode.bin",
         .format = .bin,
     });
-    const initCodeInstall = b.addInstallFile(initCodeBin.getOutput(), "../src/init/initcode.bin");
+    const initCodeInstall = b.addInstallFile(
+        initCodeBin.getOutput(),
+        "../src/init/initcode.bin",
+    );
+
+    // -------------------------------------------------------------------
+    // entryother: embedded assembly to start up non-boot processors
+    // -------------------------------------------------------------------
+    const entryOther = b.addExecutable(.{
+        .name = "entryother",
+        .root_source_file = b.path("src/mp/entryother.zig"),
+        .target = target,
+        .optimize = .ReleaseSmall,
+        .linkage = .static,
+    });
+    entryOther.addAssemblyFile(b.path("src/mp/entryother.S"));
+    entryOther.setLinkerScriptPath(b.path("src/mp/entryother.ld"));
+    const entryOtherInstall = b.addInstallArtifact(entryOther, .{});
+
+    const snip_str = [_][]const u8{
+        "zig",
+        "run",
+        "snip.zig",
+        "--",
+        b.getInstallPath(.prefix, "bin/entryother"),
+        "src/mp/entryother.bin",
+    };
+    const snip_cmd = b.addSystemCommand(&snip_str);
+    snip_cmd.step.dependOn(&entryOtherInstall.step);
 
     // -------------------------------------------------------------------
     // Build kernel. This is associated to install step, so depending on
@@ -170,6 +197,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     main.root_module.addImport("share", share);
+    main.step.dependOn(&initCodeInstall.step);
+    main.step.dependOn(&snip_cmd.step);
 
     const kernel = b.addExecutable(.{
         .name = "kernel.elf",
@@ -183,7 +212,6 @@ pub fn build(b: *std.Build) void {
     kernel.addAssemblyFile(b.path("src/vector.S"));
     kernel.addAssemblyFile(b.path("src/swtch.S"));
     kernel.setLinkerScriptPath(b.path("kernel.ld"));
-    kernel.step.dependOn(&initCodeInstall.step);
     b.installArtifact(kernel);
 
     // -------------------------------------------------------------------
