@@ -47,7 +47,7 @@ export fn start() callconv(.Naked) noreturn {
         \\ orl %[flags], %eax
         \\ movl %eax, %cr0
         :
-        : [flags] "{ecx}" (mmu.CR0_PG | mmu.CR0_WP),
+        : [flags] "{ecx}" (mmu.CR0_PE | mmu.CR0_PG | mmu.CR0_WP),
     );
     asm volatile (
         \\ movl $stack, %eax
@@ -57,7 +57,7 @@ export fn start() callconv(.Naked) noreturn {
         \\ movl $main, %eax
         \\ jmp *%eax
         :
-        : [sz] "{ecx}" (param.KSTACKSIZE)
+        : [sz] "{ecx}" (param.KSTACKSIZE),
     );
 
     while (true) {}
