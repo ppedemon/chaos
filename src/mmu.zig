@@ -27,7 +27,7 @@ pub const STS_T32A: u4 = 0x9; // Available 32-bit TSS
 pub const STS_IG32: u4 = 0xE; // 32-bit Interrupt Gate
 pub const STS_TG32: u4 = 0xF; // 32-bit Trap Gate
 
-// Safe to use packed struct sinze size = multiple of 8.
+// Safe to use packed struct since size = multiple of 8.
 // Also more convenient, since we can use bit fields.
 pub const SegDesc = packed struct {
     lim15_0: u16,
